@@ -1,0 +1,4 @@
+load 5
+add 2
+comp 3
+halt
