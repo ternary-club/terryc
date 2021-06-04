@@ -1,6 +1,6 @@
 #!/bin/sh
 
-exename="truman"
+exename="terry"
 
 gcc -pedantic -s -O2 -Werror \
 -nostdlib \

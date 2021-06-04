@@ -1,2 +1,2 @@
-# truman
-TRUMAN: Ternary stRuctUred prograMming lANguage
+# terry
+TERRY = **TER**na**R**y assembl**Y** language
