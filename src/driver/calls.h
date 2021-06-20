@@ -2,4 +2,5 @@
 #define SYS_write       1
 #define SYS_open        2
 #define SYS_close       3
+#define SYS_brk         12
 #define SYS_exit        60

@@ -1,4 +1,27 @@
-load 5
-add 2
-comp 3
-halt
+tryte  sugar  0h5F9
+word   milk   0t210
+triple egg    4
+const  flour  0b!10!1
+
+Beginning
+    milk ~|= flour
+    egg = flour * ~sugar
+    store 0hAQG milk
+Start
+    goto egg ? flour
+        <  Increase
+        == End
+# This is an important section.
+Decrease
+    eax = sugar
+    ebx = milk 
+    call 3
+    egg -/= eax
+    goto Start
+# Only in-line
+# comments.
+Increase
+    eax = flour ? milk >= 2 : flour
+    call 5
+    egg++
+    goto Start

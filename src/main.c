@@ -13,9 +13,14 @@
 #include "std/str.h"
 #endif
 
-#ifndef STD_TYPES_H
-#define STD_TYPES_H
-#include "std/types.h"
+#ifndef STD_BOOL_H
+#define STD_BOOL_H
+#include "std/bool.h"
+#endif
+
+#ifndef DRIVER_MEM_H
+#define DRIVER_MEM_H
+#include "driver/mem.h"
 #endif
 
 #ifndef COMPILER_PARSER_H
@@ -23,54 +28,68 @@
 #include "compiler/parser.h"
 #endif
 
-#define BUFFER_SIZE 256     // Has to fit in main buffer iterator
-#define OP_BUFFER_SIZE 16   // Has to fit in operation buffer iterator
+#ifndef COMPILER_ERROR_H
+#define COMPILER_ERROR_H
+#include "compiler/errors.h"
+#endif
 
-int main(int argc, char const* argv[]) {
-    intptr file = open("./exec.try");
+int main(int argc, char const *argv[]) {
+
+    file = open("./teste");
     if(file <= 0) return 1;
-    
-    // Main buffer
-    char mBuffer[BUFFER_SIZE];
-    // Main buffer iterator
-    char *mI;
-    // Operation buffer
-    char oBuffer[OP_BUFFER_SIZE];
-    // Operation buffer iterator
-    char *oI = oBuffer;
 
-    while(1) {
-        // Read buffer
-        read(file, mBuffer, BUFFER_SIZE);
-        mI = mBuffer;
-        
-        // Skip whitespaces or tabs
-        while(is_empty(*mI)) {
-            // Next char on buffer
-            mI++;
-            // If it has reached the end of buffer, load next chars
-            if(mI > mBuffer + BUFFER_SIZE) {
-                read(file, mBuffer, BUFFER_SIZE);
-                mI = mBuffer;
-            }
-        }
+    // Read buffer
+    read(file, mBuffer, MAIN_BUFFER_SIZE);
 
-        // Try to detect instruction
-        if(is_char(*mI)) {
-            // Reset operation iterator
-            oI = oBuffer;
-            // Detect characters
-            while(is_char(*mI)) {
-                // If there's still space, add char to the operation buffer
-                if(oI <= oBuffer + OP_BUFFER_SIZE) oBuffer[*oI++] = *mI;
-                // Next char
-                mI++;
-                // If it has reached the end of the buffer, load next chars
-                if(mI > mBuffer + BUFFER_SIZE) {
-                    read(file, mBuffer, BUFFER_SIZE);
-                    mI = mBuffer;
-                }
-            }
-        }
-    }
+    puts(mBuffer);
+
+    // file = open("./exec.try");
+    // if(file <= 0) return 1;
+
+    // while(1) {
+    //     // Read buffer
+    //     read(file, mBuffer, MAIN_BUFFER_SIZE);
+    //     mI = mBuffer;
+
+    //     // Remove whitespaces from the beginning of the instruction
+    //     skip_whitespaces();
+
+    //     // Parse variable sizes
+    //     parse_size();
+
+    //     // Try to parse numbers
+    //     parse_number();
+    //     if(sI > sBuffer)
+    //         // Try to parse base literals
+    //         if(is_letter() && sI[0] == '0' && sI == sBuffer - 1)
+    //             switch(*mI) {
+    //                 case 'h':
+    //                     parse_heptavintimal_number();
+    //                     if(sI > sBuffer) {
+    //                         //add_token(TOKEN_INT27);
+    //                         continue;
+    //                     }
+    //                     break;
+    //                 case 't':
+    //                     parse_ternary_number();
+    //                     if(sI > sBuffer) {
+    //                         //add_token(TOKEN_INT3);
+    //                         continue;
+    //                     }
+    //                     break;
+    //                 case 'b':
+    //                     parse_balanced_ternary_number();
+    //                     if(sI > sBuffer) {
+    //                         //add_token(TOKEN_INTB3);
+    //                         continue;
+    //                     }
+    //                     break;
+    //                 default:
+    //                     report_error(ERR_INVALID_BASE_LITERAL);
+    //             }
+    //         else {
+    //             //add_token(TOKEN_INT10);
+    //             continue;
+    //         }
+    // }
 }

@@ -18,6 +18,11 @@
 #include "std/str.h"
 #endif
 
+#ifndef STD_BOOL_H
+#define STD_BOOL_H
+#include "bool.h"
+#endif
+
 // Tryte (3 bytes) integer to ternary string
 const char *tryte_to_tstring(__tryte_ptr(t)) {
     static char tryteBuffer[2 + TRYTE_TRIT + 1];
@@ -51,4 +56,12 @@ const char *btryte_to_string(__tryte_ptr(t)) {
     }
     tryteBuffer[2 + TRYTE_TRIT] = '\0';
     return tryteBuffer;
+}
+
+// Character to string
+const char *ctoa(char a) {
+    static char charBuffer[2];
+    charBuffer[0] = a;
+    charBuffer[1] = '\0';
+    return charBuffer;
 }

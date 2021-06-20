@@ -8,8 +8,8 @@
 #include "calls.h"
 #endif
 
-typedef unsigned long int uintptr;
-typedef long int intptr;
+typedef uint64_t uintptr;
+typedef int64_t intptr;
 
 #define internal static
 
@@ -41,7 +41,7 @@ intptr write(int fd, void const *data, uintptr nbytes) {
     );
 }
 
-// Perform a 'open' system call
+// Perform an 'open' system call
 internal
 intptr open(void const *filename) {
     return (intptr)
@@ -53,7 +53,7 @@ intptr open(void const *filename) {
     );
 }
 
-// Perform a 'open' system call
+// Perform a 'read' system call
 internal
 intptr read(uint64_t fileDescriptor, char *buffer, uint64_t count) {
     return (intptr)
@@ -65,7 +65,7 @@ intptr read(uint64_t fileDescriptor, char *buffer, uint64_t count) {
     );
 }
 
-// Perform a 'open' system call
+// Perform a 'close' system call
 internal
 intptr close(uint64_t fileDescriptor) {
     return (intptr)
@@ -84,4 +84,15 @@ intptr exit(uint64_t statusCode) {
         (void*)statusCode
     );
 }
+
+// Perform a 'brk' system call
+internal
+intptr brk(uint64_t address) {
+    return (intptr)
+    syscall1(
+        SYS_brk,
+        (void *)address
+    );
+}
+
 

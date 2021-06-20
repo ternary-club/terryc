@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "errors.h": "c",
+        "parser.h": "c"
+    }
+}
