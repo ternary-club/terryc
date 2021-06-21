@@ -33,19 +33,8 @@
 #include "compiler/errors.h"
 #endif
 
-bool a() {
-    puts("a\n");
-    return true;
-}
-
-bool b() {
-    puts("b\n");
-    return false;
-}
 
 int main(int argc, char const *argv[]) {
-
-    b() && a();
 
     // file = open("./exec.try");
     // if(file <= 0) return 1;
