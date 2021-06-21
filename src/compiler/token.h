@@ -9,32 +9,59 @@
 #include "../driver/mem.h"
 #endif
 
+// Tags enum
 typedef enum {
-    NOTOKEN,
-    LABEL,
-    NUMBER,
-    VARSIZE,
-    NAME,
-    REGISTER,
-    ASSERTION,
-    COMPARISON,
-    ENDPOINT
+    T_NOTOKEN,
+    T_NEWLINE,
+    T_MONADIC,
+    T_DIADIC,
+    T_LABEL,
+    T_NUMBER,
+    T_VARSIZE,
+    T_NAME,
+    T_REGISTER,
+    T_ASSERTION,
+    T_COMPARISON,
+    T_ENDPOINT
 } TAG;
 
+// Variables enum
+typedef enum {
+    VS_CONST,
+    VS_TRYTE,
+    VS_WORD,
+    VS_TRIPLE,
+} SIZE;
+
+// Monadic operators enum
+typedef enum {
+    M_NEGATION,
+    M_INCREMENT,
+    M_DECREMENT,
+    M_ISTRUE,
+    M_ISUNKNOWN,
+    M_ISFALSE,
+    M_CLAMPUP,
+    M_CLAMPDOWN
+} MONADIC;
+
+// Coordinate struct
 typedef struct {
-    uint8_t line;
-    uint8_t column;
+    uint16_t line;
+    uint16_t column;
 } COORDINATE;
 
+// Token struct
 typedef struct {
     TAG tag;
-    uint16_t content;
     COORDINATE start;
     COORDINATE end;
+    char content[27];
 } TOKEN;
 
 // Stack
 TOKEN *stack = 0;
+uint64_t height = 0;
 
 // Cursor
 COORDINATE first;
@@ -42,7 +69,7 @@ COORDINATE last;
 
 // Push token into stack
 void push(TOKEN t) {
-    if(stack->tag == NOTOKEN) stack = (TOKEN*)heap();
+    if(!height++) stack = (TOKEN*)heap();
     *((TOKEN*)alloc(sizeof(TOKEN))) = t;
 }
 
@@ -50,10 +77,20 @@ void push(TOKEN t) {
 TOKEN pop() {
     TOKEN t = *(TOKEN*)((uint64_t)heap() - sizeof(TOKEN));
     free(sizeof(TOKEN));
+    height--;
     return t;
 }
 
-// Make token from tag and insert it into stack
-void make_token(TAG t, uint64_t content) {
-    push((TOKEN){t, content, first, last});
+// View top item of the stack
+TOKEN peep() {
+   return height ? *(TOKEN*)((uint64_t)heap() - sizeof(TOKEN)) : (TOKEN){T_NOTOKEN};
+}
+
+// New token from tag
+TOKEN new_token(TAG t) {
+    return (TOKEN){
+        t,
+        first,
+        last,
+    };
 }

@@ -33,63 +33,82 @@
 #include "compiler/errors.h"
 #endif
 
+bool a() {
+    puts("a\n");
+    return true;
+}
+
+bool b() {
+    puts("b\n");
+    return false;
+}
+
 int main(int argc, char const *argv[]) {
 
-    file = open("./teste");
-    if(file <= 0) return 1;
-
-    // Read buffer
-    read(file, mBuffer, MAIN_BUFFER_SIZE);
-
-    puts(mBuffer);
+    b() && a();
 
     // file = open("./exec.try");
     // if(file <= 0) return 1;
 
+    // bool isInsideLabel = false;
+
+    // // Read buffer
+    // read(file, mBuffer, MAIN_BUFFER_SIZE);
+    // end = mBuffer;
+    
     // while(1) {
-    //     // Read buffer
-    //     read(file, mBuffer, MAIN_BUFFER_SIZE);
-    //     mI = mBuffer;
 
     //     // Remove whitespaces from the beginning of the instruction
     //     skip_whitespaces();
-
-    //     // Parse variable sizes
-    //     parse_size();
-
-    //     // Try to parse numbers
-    //     parse_number();
-    //     if(sI > sBuffer)
-    //         // Try to parse base literals
-    //         if(is_letter() && sI[0] == '0' && sI == sBuffer - 1)
-    //             switch(*mI) {
-    //                 case 'h':
-    //                     parse_heptavintimal_number();
-    //                     if(sI > sBuffer) {
-    //                         //add_token(TOKEN_INT27);
-    //                         continue;
-    //                     }
-    //                     break;
-    //                 case 't':
-    //                     parse_ternary_number();
-    //                     if(sI > sBuffer) {
-    //                         //add_token(TOKEN_INT3);
-    //                         continue;
-    //                     }
-    //                     break;
-    //                 case 'b':
-    //                     parse_balanced_ternary_number();
-    //                     if(sI > sBuffer) {
-    //                         //add_token(TOKEN_INTB3);
-    //                         continue;
-    //                     }
-    //                     break;
-    //                 default:
-    //                     report_error(ERR_INVALID_BASE_LITERAL);
-    //             }
-    //         else {
-    //             //add_token(TOKEN_INT10);
+        
+    //     // Validate variable declaration
+    //     if(parse_size()) {
+    //         // Check precedent
+    //         if(peep().content != T_NOTOKEN && peep().content != T_NEWLINE) {
+    //             report_error(E_UNEXPECTED_VARSIZE);
     //             continue;
     //         }
+    //         // Check if it's inside a label
+    //         if(isInsideLabel) report_error(E_VARDEC_INSIDE_LABEL);
+
+    //         // Check successor
+    //         if(parse_var()) if(parse_number());
+    //         else report_error(E_EXPECTED_NAME);
+    //     }
+
+        // // Try to parse numbers
+        // parse_number();
+        // if(sI > sBuffer)
+        //     // Try to parse base literals
+        //     if(is_letter() && sI[0] == '0' && sI == sBuffer - 1)
+        //         switch(*mI) {
+        //             case 'h':
+        //                 parse_heptavintimal_number();
+        //                 if(sI > sBuffer) {
+        //                     //add_token(TOKEN_INT27);
+        //                     continue;
+        //                 }
+        //                 break;
+        //             case 't':
+        //                 parse_ternary_number();
+        //                 if(sI > sBuffer) {
+        //                     //add_token(TOKEN_INT3);
+        //                     continue;
+        //                 }
+        //                 break;
+        //             case 'b':
+        //                 parse_balanced_ternary_number();
+        //                 if(sI > sBuffer) {
+        //                     //add_token(TOKEN_INTB3);
+        //                     continue;
+        //                 }
+        //                 break;
+        //             default:
+        //                 report_error(EINVALID_BASE_LITERAL);
+        //         }
+        //     else {
+        //         //add_token(TOKEN_INT10);
+        //         continue;
+        //     }
     // }
 }

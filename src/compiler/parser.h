@@ -9,23 +9,25 @@
 #endif
 
 #define MAIN_BUFFER_SIZE 243
+#define TOKEN_BUFFER_SIZE 27
 
 // Integers enum
 typedef enum {
-    NAN,
-    INT27,
-    INT10,
-    INT3,
-    INTB3,
+    I_NAN,
+    I_ILITERAL,
+    I_INUM,
+    I_INT27,
+    I_INT10,
+    I_INT3,
+    I_INTB3,
 } INTTYPE;
 
-// Variables enum
+// Raw values enum
 typedef enum {
-    VSCONST,
-    VSTRYTE,
-    VSWORD,
-    VSTRIPLE,
-} SIZE;
+    R_NOTRAW,
+    R_IRAW,
+    R_RAW
+} RAW;
 
 // File
 intptr file;
@@ -37,9 +39,26 @@ char mBuffer[MAIN_BUFFER_SIZE * 2];
 char *start;
 char *end;
 
+// Reset cursor and buffer pointers
+void begin() {
+    start = end;
+    first = last;
+}
+
+// Rewind cursor and buffer pointers
+void rewind() {
+    end = start;
+    last = first;
+}
+
 // Check if a character is end of text
 bool is_etx() {
     return *end == '\x03' || *end == '\0';
+}
+
+// Check if a character is an underscore
+bool is_underscore() {
+    return *end == '_';
 }
 
 // Check if a character is a lowercase letter
@@ -106,11 +125,22 @@ bool is_operator() {
            *end == '\\';
 }
 
+// Check if a character is a separator
+bool is_separator() {
+    return is_operator() || is_empty() || is_useless() || is_etx();
+}
+
 // Compare string with interval string
 bool strcmp_i(const char *a) {
     char *b = start;
     while(*a || b < end) if(*a++ != *b++) return false;
     return true;
+}
+
+// Paste interval string in buffer
+void strcpy_i(char *a) {
+    char *b = start;
+    while(b < end && b < start + TOKEN_BUFFER_SIZE) *a++ = *b++;
 }
 
 // Next char
@@ -136,140 +166,121 @@ void advance_blank() {
 
 // Parse a variable size
 bool parse_size() {
-    start = end;
-    first = last;
+    begin();    
     while(is_lowercase()) next();
 
-    if(strcmp_i("const")) {
-        make_token(VARSIZE, VSCONST);
-        return true;
+    if(!is_separator()) {
+        rewind();
+        return false;
     }
-    if(strcmp_i("tryte")) {
-        make_token(VARSIZE, VSTRYTE);
-        return true;
-    }
-    if(strcmp_i("word")) {
-        make_token(VARSIZE, VSWORD);
-        return true;
-    }
-    if(strcmp_i("triple")) {
-        make_token(VARSIZE, VSTRIPLE);
-        return true;
-    }
+
+    TOKEN t = new_token(T_VARSIZE);
     
-    return false;
+    if(strcmp_i("const"))       *((uint8_t*)t.content) = VS_CONST;
+    else if(strcmp_i("tryte"))  *((uint8_t*)t.content) = VS_TRYTE;
+    else if(strcmp_i("word"))   *((uint8_t*)t.content) = VS_WORD;
+    else if(strcmp_i("triple")) *((uint8_t*)t.content) = VS_TRIPLE;
+    else {
+        rewind();
+        return false;
+    }
+
+    push(t);
+    return true;
 }
 
-// // Parse a number from string
-// INTTYPE parse_number() {
-//     // Reset secondary iterator
-//     sI = sBuffer;
-//     // Detect characters
-//     while(is_number(*mI)) {
-//         // If there's still space, add char to the secondary buffer
-//         if(sI <= sBuffer + SECONDARY_BUFFER_SIZE) sBuffer[*sI++] = *mI;
-//         // Next char
-//         mI++;
-//         // If it has reached the end of the buffer, load next chars
-//         if(mI > mBuffer + SECONDARY_BUFFER_SIZE) {
-//             read(file, mBuffer, MAIN_BUFFER_SIZE);
-//             mI = mBuffer;
-//         }
-//     }
-// }
+// Parse a monadic operator
+bool parse_monadic() {
+    begin();
+    while(is_operator()) next();
 
-// // Parse a heptavintimal number from string
-// void parse_heptavintimal_number() {
-//     // Reset secondary iterator
-//     sI = sBuffer;
-//     // Detect characters
-//     while(is_heptavintimal(*mI)) {
-//         // If there's still space, add char to the secondary buffer
-//         if(sI <= sBuffer + SECONDARY_BUFFER_SIZE) sBuffer[*sI++] = *mI;
-//         // Next char
-//         mI++;
-//         // If it has reached the end of the buffer, load next chars
-//         if(mI > mBuffer + SECONDARY_BUFFER_SIZE) {
-//             read(file, mBuffer, MAIN_BUFFER_SIZE);
-//             mI = mBuffer;
-//         }
-//     }
-// }
+    TOKEN t = new_token(T_MONADIC);
+    
+    if(strcmp_i("~"))           *((uint8_t*)t.content) = M_NEGATION;
+    else if(strcmp_i("+/"))     *((uint8_t*)t.content) = M_INCREMENT;
+    else if(strcmp_i("-/"))     *((uint8_t*)t.content) = M_DECREMENT;
+    else if(strcmp_i("%|"))     *((uint8_t*)t.content) = M_ISTRUE;
+    else if(strcmp_i("%/"))     *((uint8_t*)t.content) = M_ISUNKNOWN;
+    else if(strcmp_i("%-"))     *((uint8_t*)t.content) = M_ISFALSE;
+    else if(strcmp_i("/\\"))    *((uint8_t*)t.content) = M_CLAMPUP;
+    else if(strcmp_i("\\/"))    *((uint8_t*)t.content) = M_CLAMPDOWN;
+    else {
+        rewind();
+        return false;
+    }
+}
 
-// // Parse a ternary number from string
-// void parse_ternary_number() {
-//     // Reset secondary iterator
-//     sI = sBuffer;
-//     // Detect characters
-//     while(is_ternary(*mI)) {
-//         // If there's still space, add char to the secondary buffer
-//         if(sI <= sBuffer + SECONDARY_BUFFER_SIZE) sBuffer[*sI++] = *mI;
-//         // Next char
-//         mI++;
-//         // If it has reached the end of the buffer, load next chars
-//         if(mI > mBuffer + SECONDARY_BUFFER_SIZE) {
-//             read(file, mBuffer, MAIN_BUFFER_SIZE);
-//             mI = mBuffer;
-//         }
-//     }
-// }
+// Parse a variable name
+bool parse_var() {
+    begin();    
+    while(is_lowercase() || is_underscore()) next();
 
-// // Parse a balanced ternary number from string
-// void parse_balanced_ternary_number() {
-//     // Reset secondary iterator
-//     sI = sBuffer;
-//     // Detect characters
-//     while(is_balanced(*mI)) {
-//         // If there's still space, add char to the secondary buffer
-//         if(sI <= sBuffer + SECONDARY_BUFFER_SIZE) sBuffer[*sI++] = *mI;
-//         // Next char
-//         mI++;
-//         // If it has reached the end of the buffer, load next chars
-//         if(mI > mBuffer + SECONDARY_BUFFER_SIZE) {
-//             read(file, mBuffer, MAIN_BUFFER_SIZE);
-//             mI = mBuffer;
-//         }
-//     }
-// }
+    if(!is_separator()) {
+        rewind();
+        return false;
+    }
 
-// // Parse whitespaces from string
-// void skip_whitespaces() {
-//     // Skip whitespaces or tabs
-//     while(is_empty(*mI)) next();
-// }
+    TOKEN t = new_token(T_NAME);
+    strcpy_i(t.content);
+    push(t);
+    return true;
+}
 
-// // Parse a balanced ternary number from string
-// void parse_balanced_ternary_number() {
-//     // Reset secondary iterator
-//     sI = sBuffer;
-//     // Detect characters
-//     while(is_balanced(*mI)) {
-//         // If there's still space, add char to the secondary buffer
-//         if(sI <= sBuffer + SECONDARY_BUFFER_SIZE) sBuffer[*sI++] = *mI;
-//         // Next char
-//         mI++;
-//         // If it has reached the end of the buffer, load next chars
-//         if(mI > mBuffer + SECONDARY_BUFFER_SIZE) {
-//             read(file, mBuffer, MAIN_BUFFER_SIZE);
-//             mI = mBuffer;
-//         }
-//     }
-// }
+// Parse a number from string
+INTTYPE parse_number() {
+    begin();
+    if(*end == '0') {
+        switch(*end) {
+            case 't':
+                while(is_ternary()) next();
+                if(!is_separator()) {
+                    rewind();
+                    return I_INUM;
+                }
+                return I_INT3;
+            case 'b':
+                while(is_balanced()) next();
+                if(!is_separator()) {
+                    rewind();
+                    return I_INUM;
+                }
+                return I_INTB3;
+            case 'h':
+                while(is_heptavintimal()) next();
+                if(!is_separator()) {
+                    rewind();
+                    return I_INUM;
+                }
+                return I_INT27;
+            default:
+                rewind();            
+                return I_ILITERAL;
+        }
+    } else if(is_number()) {
+        while(is_number()) next();
+        if(!is_separator()) {
+            rewind();
+            return I_INUM;
+        }
+        return I_INT10;
+    } else return I_NAN;
+}
 
-// // Parse an arithmetic operator
-// void parse_arithmetic_operator() {
-//     // Reset secondary iterator
-//     sI = sBuffer;
-//     // Detect characters
-//     while(is_balanced(*mI)) {
-//         // If there's still space, add char to the secondary buffer
-//         if(sI <= sBuffer + SECONDARY_BUFFER_SIZE) sBuffer[*sI++] = *mI;
-//         // Next char
-//         mI++;
-//         // If it has reached the end of the buffer, load next chars
-//         if(mI > mBuffer + SECONDARY_BUFFER_SIZE) {
-//             read(file, mBuffer, MAIN_BUFFER_SIZE);
-//             mI = mBuffer;
-//         }
-//     }
-// }
+// Parse raw value
+RAW parse_raw_value() {
+    begin();
+    bool hasMonadic = false;
+    while(parse_monadic()) hasMonadic = true;
+
+    if(parse_number() || parse_var()) return R_RAW;
+    rewind();
+    return hasMonadic ? R_IRAW : R_NOTRAW;
+}
+
+// Parse a value
+bool parse_value() {
+    begin();
+    if(parse_number() || parse_var()) {
+
+    }
+}
