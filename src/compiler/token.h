@@ -15,8 +15,13 @@ typedef enum {
     T_NEWLINE,
     T_MONADIC,
     T_DIADIC,
+    T_MULTIDIC,
+    T_LOGICAL,
     T_LABEL,
-    T_NUMBER,
+    T_INTB3,
+    T_INT3,
+    T_INT10,
+    T_INT27,
     T_VARSIZE,
     T_NAME,
     T_REGISTER,
@@ -35,6 +40,7 @@ typedef enum {
 
 // Monadic operators enum
 typedef enum {
+    M_SUBTRACTION,
     M_NEGATION,
     M_INCREMENT,
     M_DECREMENT,
@@ -44,6 +50,23 @@ typedef enum {
     M_CLAMPUP,
     M_CLAMPDOWN
 } MONADIC;
+
+// Diadic operators enum
+typedef enum {
+    D_ADDITION,
+    D_SUBTRACTION,
+    D_MULTIPLICATION,
+    D_DIVISION,
+    D_MODULO,
+    D_OR,
+    D_AND,
+    D_XOR,
+    D_ANY,
+    D_CONSENSUS,
+    D_SUM,
+    D_NOR,
+    D_NAND,
+} DIADIC;
 
 // Coordinate struct
 typedef struct {

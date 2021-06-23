@@ -36,68 +36,46 @@
 
 int main(int argc, char const *argv[]) {
 
-    // file = open("./exec.try");
-    // if(file <= 0) return 1;
+    file = open("./test.try");
+    if(file <= 0) return - 1;
 
-    // bool isInsideLabel = false;
+    bool isInsideLabel = false;
 
-    // // Read buffer
-    // read(file, mBuffer, MAIN_BUFFER_SIZE);
-    // end = mBuffer;
+    // Read buffer
+    read(file, mBuffer, MAIN_BUFFER_SIZE);
+    end = mBuffer;
     
-    // while(1) {
+    while(1) {
+        if(is_etx()) break;
 
-    //     // Remove whitespaces from the beginning of the instruction
-    //     skip_whitespaces();
+        // Remove whitespaces from the beginning of the instruction
+        advance_blank();
         
-    //     // Validate variable declaration
-    //     if(parse_size()) {
-    //         // Check precedent
-    //         if(peep().content != T_NOTOKEN && peep().content != T_NEWLINE) {
-    //             report_error(E_UNEXPECTED_VARSIZE);
-    //             continue;
-    //         }
-    //         // Check if it's inside a label
-    //         if(isInsideLabel) report_error(E_VARDEC_INSIDE_LABEL);
+        // Validate variable declaration
+        if(parse_size()) {
+            // Check precedent
+            if(*((TAG*)peep().content) != T_NOTOKEN && *((TAG*)peep().content) != T_NEWLINE) {
+                report_error(E_UNEXPECTED_VARSIZE);
+                continue;
+            }
 
-    //         // Check successor
-    //         if(parse_var()) if(parse_number());
-    //         else report_error(E_EXPECTED_NAME);
-    //     }
+            // Check if it's inside a label
+            if(isInsideLabel) report_error(E_VARDEC_INSIDE_LABEL);
 
-        // // Try to parse numbers
-        // parse_number();
-        // if(sI > sBuffer)
-        //     // Try to parse base literals
-        //     if(is_letter() && sI[0] == '0' && sI == sBuffer - 1)
-        //         switch(*mI) {
-        //             case 'h':
-        //                 parse_heptavintimal_number();
-        //                 if(sI > sBuffer) {
-        //                     //add_token(TOKEN_INT27);
-        //                     continue;
-        //                 }
-        //                 break;
-        //             case 't':
-        //                 parse_ternary_number();
-        //                 if(sI > sBuffer) {
-        //                     //add_token(TOKEN_INT3);
-        //                     continue;
-        //                 }
-        //                 break;
-        //             case 'b':
-        //                 parse_balanced_ternary_number();
-        //                 if(sI > sBuffer) {
-        //                     //add_token(TOKEN_INTB3);
-        //                     continue;
-        //                 }
-        //                 break;
-        //             default:
-        //                 report_error(EINVALID_BASE_LITERAL);
-        //         }
-        //     else {
-        //         //add_token(TOKEN_INT10);
-        //         continue;
-        //     }
-    // }
+            // Check successor
+            advance_blank();
+            if(parse_var()) {
+                advance_blank();
+                if(!parse_value()) report_error(E_EXPECTED_VALUE);
+            }
+            else report_error(E_EXPECTED_NAME);
+        }
+
+        // Check if it's \n
+        parse_newline();
+    }
+
+    for(uint64_t i = 0; i < height; i++) {
+        puts(stack[i].tag == T_NEWLINE ? "\n" : itoa(stack[i].tag));
+    }
 }
