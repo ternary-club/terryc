@@ -26,8 +26,8 @@ typedef enum {
     T_NAME,
     T_REGISTER,
     T_ASSERTION,
-    T_COMPARISON,
-    T_ENDPOINT
+    T_ENDPOINT,
+    T_COMMENT
 } TAG;
 
 // Variables enum
@@ -110,9 +110,9 @@ TOKEN peep() {
 }
 
 // New token from tag
-TOKEN new_token(TAG t) {
+TOKEN new_token() {
     return (TOKEN){
-        t,
+        T_NOTOKEN,
         first,
         last,
     };

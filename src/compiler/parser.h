@@ -101,14 +101,9 @@ bool is_empty() {
     return *end == ' ' || *end == '\t';
 }
 
-// Check if a character is \n
+// Check if a character is CR/LF
 bool is_newline() {
-    return *end == '\n';
-}
-
-// Check if a character is \r
-bool is_useless() {
-    return *end == '\r';
+    return *end == '\n' || *end == '\r';
 }
 
 // Check if a character is a balanced ternary number
@@ -137,7 +132,7 @@ bool is_operator() {
 
 // Check if a character is a separator
 bool is_separator() {
-    return is_operator() || is_newline() || is_empty() || is_useless() || is_etx();
+    return is_operator() || is_newline() || is_empty() || is_etx();
 }
 
 // Compare string with interval string
@@ -190,73 +185,29 @@ void advance_blank() {
     while(is_empty()) next();
 }
 
-// If its a newline character, then jump to the next line
-bool parse_newline() {
-    if(is_newline()) {
-        push(new_token(T_NEWLINE));
-        next_line();
-        next();
-        return true;
-    }
-    return false;
-}
-
-// Parse a variable size
-bool parse_size() {   
-    begin();    
-    
-    // Read lowercase letters
-    while(is_lowercase()) next();
-
-    // Until it finds a separator
-    if(!is_separator()) {
-        rewind();
-        return false;
-    }
-
-    // Then compare the size and push it
-    TOKEN t = new_token(T_VARSIZE);
-    
-    if(strcmp_i("const", true))       *((uint8_t*)t.content) = VS_CONST;
-    else if(strcmp_i("tryte", true))  *((uint8_t*)t.content) = VS_TRYTE;
-    else if(strcmp_i("word", true))   *((uint8_t*)t.content) = VS_WORD;
-    else if(strcmp_i("triple", true)) *((uint8_t*)t.content) = VS_TRIPLE;
-    else {
-        report_error(E_UNKNOWN_VARSIZE);
-        return true;
-    }
-
-    push(t);
-    return true;
-}
-
-// Parse a variable name
-bool parse_var() {
-    begin();
-    // If it doesn't start with an acceptable variable name character,
-    // it's likely not a variable
-    if(!is_lowercase() && !is_underscore() && !is_number()) return false;
-
-    // Read variable name acceptable characters
-    do next(); while(is_lowercase() || is_underscore() || is_number());
-    // If it finds a strange character along the way, it's likely a
-    // wrong variable name, so read the rest and don't push it
-    if(!is_separator()) {
-        do next(); while(!is_separator());
-        report_error(E_INVALID_VARIABLE_NAME);
-        return true;
-    }
-
-    // If it doesn't find strange characters, push it
-    TOKEN t = new_token(T_NAME);
-    strcpy_i(t.content);
-    push(t);
-    return true;
-}
-
 TOKEN parse_token() {
-    TOKEN t = new_token(T_NOTOKEN);
+    TOKEN t = new_token();
     begin();
+
+    // Try to parse a comment
+    if(*end == '#') {
+        do next(); while(!is_newline() && !is_etx());
+        t.tag = T_COMMENT;
+        return t;
+    }
+    
+    // Try to parse a newline
+    if(is_newline()) {
+        do next(); while(is_newline());
+        t.tag = T_NEWLINE;
+        return t;
+    }
+    
+    // Try to parse the end of text
+    if(is_etx()) {
+        t.tag = T_ENDPOINT;
+        return t;
+    }
 
     // Try to parse base literals
     if(*end == '0') {
@@ -264,6 +215,8 @@ TOKEN parse_token() {
         switch(*end) {
             case 't':
                 next();
+                // If hasn't even 1 algarism, then rewind and return
+                if(is_separator()) report_error(E_EMPTY_BASE_LITERAL);
                 while(is_ternary()) next();
                 // If it finds a strange character, it's likely
                 // a wrong ternary number, so finish it and throw error
@@ -275,6 +228,8 @@ TOKEN parse_token() {
                 return t;
             case 'b':
                 next();
+                // If hasn't even 1 algarism, then rewind and break
+                if(is_separator()) report_error(E_EMPTY_BASE_LITERAL);
                 while(is_balanced()) next();
                 // If it finds a strange character, it's likely
                 // a wrong trinary number, so finish it and throw error
@@ -286,6 +241,8 @@ TOKEN parse_token() {
                 return t;
             case 'h':
                 next();
+                // If hasn't even 1 algarism, then rewind and break
+                if(is_separator()) report_error(E_EMPTY_BASE_LITERAL);
                 while(is_heptavintimal()) next();
                 // If it finds a strange character, it's likely
                 // a wrong heptavintimal number, so finish it and throw error
@@ -299,6 +256,13 @@ TOKEN parse_token() {
                 // If it doesn't fit anywhere else and if it's a character,
                 // then it's an unknown base literal, so finish the string and throw error
                 if(is_lowercase()) {
+                    next();
+                    // If hasn't even 1 algarism, then rewind and break
+                    if(is_separator()) {
+                        report_error(E_EMPTY_BASE_LITERAL);
+                        rewind();
+                        break;
+                    }
                     do next(); while(!is_separator());
                     report_error(E_UNKNOWN_BASE_LITERAL);
                     t.tag = T_INT10;
@@ -306,11 +270,38 @@ TOKEN parse_token() {
                 }
                 // If it isn't a letter, then it's not a base literal, so
                 // get back
-                prev();
+                rewind();
                 break;
         }
     }
     
+    // Try to a register
+    if(is_number()) {
+        bool isExistingRegister = true;
+        int8_t registerNum = *end - '0';
+        // If it's out of the registers intervals, then it's a non-existing register
+        if(registerNum < 1 || registerNum > 3 && registerNum != 9) isExistingRegister = false;
+
+        next();
+        if(is_lowercase()) {
+            char registerLetter = *end - 'a';
+            // If it's out of the registers intervals, then it's a non-existing register
+            if(isExistingRegister &&
+                (registerLetter < 0 || registerLetter > 8) ||
+                (registerLetter > 2) && registerNum == 9)
+                    isExistingRegister = false;
+            
+            next();
+            // If it's exactly a number and a letter, then it's
+            // likely a register
+            if(is_separator()) {
+                if(!isExistingRegister) report_error(E_UNKNOWN_REGISTER);
+                t.tag = T_REGISTER;
+                return t;
+            } else rewind();
+        } else rewind();
+    }
+
     // Try to match base 10 number
     if(is_number()) {
         do next(); while(is_number());
@@ -324,19 +315,24 @@ TOKEN parse_token() {
         return t;
     }
     
+    // Try to match an assertion
+    if(*end == '=') {
+        next();
+        if(!is_operator()) {
+            t.tag = T_ASSERTION;
+            return t;
+        }
+    }
 
     // Try to match an operator
-    bool hasAssertion = *end == '=';
-    if(is_operator() || hasAssertion) {
+    if(*end == '=' || is_operator()) {
         bool isOperator = true;
+        bool isLogical = true;
         bool isDiadicTritwise = false;
         // Try to match an assertion
-        if(hasAssertion) {
+        if(*end == '=') {
             next();
-            if(!is_operator()) {
-                t.tag = T_ASSERTION;
-                return t;
-            }
+            isLogical = true;
         }
 
         // Read operator characters
@@ -429,7 +425,7 @@ TOKEN parse_token() {
         // If it is an operator
         if(isOperator) {
             // and it's logical, then replace the tag
-            if(hasAssertion) {
+            if(isLogical) {
                 // If it's not a diadic tritwise operator, throw error
                 if(!isDiadicTritwise) report_error(E_LOGICAL_NON_DIADIC_TRITWISE);
                 t.tag = T_LOGICAL;
@@ -440,7 +436,7 @@ TOKEN parse_token() {
 
     // Try to parse label
     if(is_uppercase()) {
-        do next(); while(is_lowercase());
+        do next(); while(is_lowercase() || is_number() || is_uppercase());
         // If it finds a strange character, it's likely
         // a wrong label name, so finish it and throw error
         if(!is_separator()) {
@@ -450,4 +446,44 @@ TOKEN parse_token() {
         t.tag = T_LABEL;
         return t;
     }
+
+    // Try to parse variable size
+    if(is_lowercase()) {
+        bool isVarSize = true;
+        do next(); while(is_lowercase());
+
+        // If it finds a strange character, it's likely not
+        // a wrong variable size, so mark it as false
+        if(!is_separator()) isVarSize = false;
+
+        // Try to compare variable sizes
+        else if(strcmp_i("const", true))    *((uint8_t*)t.content) = VS_CONST;
+        else if(strcmp_i("tryte", true))    *((uint8_t*)t.content) = VS_TRYTE;
+        else if(strcmp_i("word", true))     *((uint8_t*)t.content) = VS_WORD;
+        else if(strcmp_i("triple", true))   *((uint8_t*)t.content) = VS_TRIPLE;
+        else isVarSize = false;
+
+        // Rewind if is not a known variable size or return if it is
+        if(isVarSize) {
+            t.tag = T_VARSIZE;
+            return t;
+        } else rewind();
+    }
+
+    // Try to parse variable name
+    if(is_lowercase() || is_underscore()) {
+        do next(); while(is_lowercase() || is_underscore() || is_number());
+        // If it doesn't fit anywhere else and if it's a character, it's likely
+        // a bad variable name, so finish the string, throw error and return
+        if(!is_separator()) {
+            do next(); while(!is_separator());
+            report_error(E_INVALID_VARIABLE_NAME);
+        }
+        t.tag = T_NAME;
+        return t;
+    }
+
+    // If it's nothing else, then return T_NOTOKEN
+    t.tag = T_NOTOKEN;
+    return t;
 }

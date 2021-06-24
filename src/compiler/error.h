@@ -13,9 +13,11 @@ typedef enum {
     E_EXPECTED_VALUE,
     E_UNKNOWN_BASE_LITERAL,
     E_INVALID_BASE_LITERAL,
+    E_EMPTY_BASE_LITERAL,
     E_INVALID_NUMBER,
     E_LOGICAL_NON_DIADIC_TRITWISE,
     E_INVALID_LABEL,
+    E_UNKNOWN_REGISTER,
     E_EXPECTED_MONADIC_OPERAND,
     E_EXPECTED_DIADIC_OPERAND,
 } ERROR;
@@ -53,6 +55,9 @@ void report_error(ERROR err) {
     case E_INVALID_BASE_LITERAL:
         puts("invalid algarism for base literal");
         break;
+    case E_EMPTY_BASE_LITERAL:
+        puts("empty number in base literal");
+        break;
     case E_INVALID_NUMBER:
         puts("invalid algarism in number");
         break;
@@ -61,6 +66,9 @@ void report_error(ERROR err) {
         break;
     case E_INVALID_LABEL:
         puts("invalid label name");
+        break;
+    case E_UNKNOWN_REGISTER:
+        puts("unknown register");
         break;
     case E_EXPECTED_MONADIC_OPERAND:
         puts("expected operand of monadic operator");
