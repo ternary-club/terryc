@@ -1,3 +1,4 @@
-FROM ternarypetshop/tailor
-ADD truman /truman
-ADD exec.tru /exec.tru
+FROM ternaryclub/taylor
+ADD terry /terry
+# ADD exec.tru /exec.tru
+# CMD ["/terry"]
