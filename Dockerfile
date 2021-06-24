@@ -1,4 +1,4 @@
 FROM ternaryclub/taylor
 ADD terry /terry
-# ADD exec.try /exec.try
+# ADD test.try /test.try
 # CMD ["/terry"]
