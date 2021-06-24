@@ -230,37 +230,6 @@ bool parse_size() {
     return true;
 }
 
-// Parse a monadic operator
-bool parse_monadic() {
-    begin();
-    // If it doesn't start with an acceptable operator character,
-    // it's likely not an operator
-    if(!is_operator()) return false;
-    
-    // Read operator characters
-    while(is_operator()) next();
-
-    // Compare and push
-    TOKEN t = new_token(T_MONADIC);
-    
-    if(strcmp_i("-", false))           *((uint8_t*)t.content) = M_SUBTRACTION;
-    else if(strcmp_i("~", false))      *((uint8_t*)t.content) = M_NEGATION;
-    else if(strcmp_i("+/", false))     *((uint8_t*)t.content) = M_INCREMENT;
-    else if(strcmp_i("-/", false))     *((uint8_t*)t.content) = M_DECREMENT;
-    else if(strcmp_i("%|", false))     *((uint8_t*)t.content) = M_ISTRUE;
-    else if(strcmp_i("%/", false))     *((uint8_t*)t.content) = M_ISUNKNOWN;
-    else if(strcmp_i("%-", false))     *((uint8_t*)t.content) = M_ISFALSE;
-    else if(strcmp_i("/\\", false))    *((uint8_t*)t.content) = M_CLAMPUP;
-    else if(strcmp_i("\\/", false))    *((uint8_t*)t.content) = M_CLAMPDOWN;
-    else {
-        rewind();
-        return false;
-    }
-
-    push(t);
-    return true;
-}
-
 // Parse a variable name
 bool parse_var() {
     begin();
@@ -285,141 +254,6 @@ bool parse_var() {
     return true;
 }
 
-// Parse a number from string
-bool parse_number() {
-    begin();
-    // If it starts with zero, check if it's a base literal
-    if(*end == '0') {
-        next();
-        switch(*end) {
-            case 't':
-                next();
-                while(is_ternary()) next();
-                // If it finds a strange character, it's likely
-                // a wrong ternary number, so finish it and don't push it
-                if(!is_separator()) {
-                    do next(); while(!is_separator());
-                    report_error(E_INVALID_BASE_LITERAL);
-                    return true;
-                }
-                return true;
-            case 'b':
-                next();
-                while(is_balanced()) next();
-                // If it finds a strange character, it's likely
-                // a wrong trinary number, so finish it and don't push it
-                if(!is_separator()) {
-                    do next(); while(!is_separator());
-                    report_error(E_INVALID_BASE_LITERAL);
-                    return true;
-                }
-                return true;
-            case 'h':
-                next();
-                while(is_heptavintimal()) next();
-                // If it finds a strange character, it's likely
-                // a wrong heptavintimal number, so finish it and don't push it
-                if(!is_separator()) {
-                    do next(); while(!is_separator());
-                    report_error(E_INVALID_BASE_LITERAL);
-                    return true;
-                }
-                return true;
-            default:
-                // If it doesn't fit anywhere else and if it's a character,
-                // then it's an unknown base literal, so finish the string
-                // and don't push it
-                if(is_lowercase()) {
-                    do next(); while(!is_separator());
-                    report_error(E_UNKNOWN_BASE_LITERAL);
-                    return true;
-                }
-                // If it isn't a letter, then it's not a base literal, so
-                // get back
-                prev();
-                break;
-        }
-    }
-    
-    // Try to parse it as a decimal
-    if(is_number()) {
-        do next(); while(is_number());
-        // If it finds a strange character, it's likely
-        // a wrong number, so finish it and don't push it
-        if(!is_separator()) {
-            do next(); while(!is_separator());
-            report_error(E_INVALID_NUMBER);
-            return true;
-        }
-        return true;
-    }
-    // If it doesn't start with 0 or any numeric character, then it's
-    // likely not a number, so rewind it and return
-    rewind();
-    return false;
-}
-
-// Parse raw value
-bool parse_raw_value() {
-    bool hasMonadic = false;
-    // TODO: parse_monadic() will identify many operators as one
-    while(parse_monadic()) hasMonadic = true;
-    if(parse_number() || parse_var()) return true;
-    if(hasMonadic) report_error(E_EXPECTED_MONADIC_OPERAND);
-    return hasMonadic;
-}
-
-// Parse a diadic operator
-bool parse_diadic() {
-    begin();
-    while(is_operator()) next();
-
-    TOKEN t = new_token(T_DIADIC);
-    
-    if(strcmp_i("+", false))       *((uint8_t*)t.content) = D_ADDITION;
-    else if(strcmp_i("-", false))  *((uint8_t*)t.content) = D_SUBTRACTION;
-    else if(strcmp_i("*", false))  *((uint8_t*)t.content) = D_MULTIPLICATION;
-    else if(strcmp_i("/", false))  *((uint8_t*)t.content) = D_DIVISION;
-    else if(strcmp_i("%", false))  *((uint8_t*)t.content) = D_MODULO;
-    else if(strcmp_i("|", false))  *((uint8_t*)t.content) = D_OR;
-    else if(strcmp_i("&", false))  *((uint8_t*)t.content) = D_AND;
-    else if(strcmp_i("^", false))  *((uint8_t*)t.content) = D_XOR;
-    else if(strcmp_i("**", false)) *((uint8_t*)t.content) = D_ANY;
-    else if(strcmp_i("/%", false)) *((uint8_t*)t.content) = D_CONSENSUS;
-    else if(strcmp_i("/+", false)) *((uint8_t*)t.content) = D_SUM;
-    else if(strcmp_i("~|", false)) *((uint8_t*)t.content) = D_NOR;
-    else if(strcmp_i("~&", false)) *((uint8_t*)t.content) = D_NAND;
-    else {
-        rewind();
-        return false;
-    }
-
-    push(t);
-    return true;
-}
-
-// Parse a logical operator
-bool parse_logical() {
-    if(*end != '=') return false;
-    next();
-    if(!parse_diadic()) {
-        prev();
-        return false;
-    }
-    return true;
-}
-
-// Parse a value
-bool parse_value() {
-    if(!parse_raw_value()) return false;
-    if(parse_diadic() || parse_logical()) {
-        if(parse_value()) return true;
-        report_error(E_EXPECTED_DIADIC_OPERAND);
-        return true;
-    }
-    return true;
-}
-
 TOKEN parse_token() {
     TOKEN t = new_token(T_NOTOKEN);
     begin();
@@ -432,7 +266,7 @@ TOKEN parse_token() {
                 next();
                 while(is_ternary()) next();
                 // If it finds a strange character, it's likely
-                // a wrong ternary number, so finish it and don't push it
+                // a wrong ternary number, so finish it and throw error
                 if(!is_separator()) {
                     do next(); while(!is_separator());
                     report_error(E_INVALID_BASE_LITERAL);
@@ -443,7 +277,7 @@ TOKEN parse_token() {
                 next();
                 while(is_balanced()) next();
                 // If it finds a strange character, it's likely
-                // a wrong trinary number, so finish it and don't push it
+                // a wrong trinary number, so finish it and throw error
                 if(!is_separator()) {
                     do next(); while(!is_separator());
                     report_error(E_INVALID_BASE_LITERAL);
@@ -454,7 +288,7 @@ TOKEN parse_token() {
                 next();
                 while(is_heptavintimal()) next();
                 // If it finds a strange character, it's likely
-                // a wrong heptavintimal number, so finish it and don't push it
+                // a wrong heptavintimal number, so finish it and throw error
                 if(!is_separator()) {
                     do next(); while(!is_separator());
                     report_error(E_INVALID_BASE_LITERAL);
@@ -463,8 +297,7 @@ TOKEN parse_token() {
                 return t;
             default:
                 // If it doesn't fit anywhere else and if it's a character,
-                // then it's an unknown base literal, so finish the string
-                // and don't push it
+                // then it's an unknown base literal, so finish the string and throw error
                 if(is_lowercase()) {
                     do next(); while(!is_separator());
                     report_error(E_UNKNOWN_BASE_LITERAL);
@@ -482,7 +315,7 @@ TOKEN parse_token() {
     if(is_number()) {
         do next(); while(is_number());
         // If it finds a strange character, it's likely
-        // a wrong heptavintimal number, so finish it and don't push it
+        // a wrong decimal number, so finish it and throw error
         if(!is_separator()) {
             do next(); while(!is_separator());
             report_error(E_INVALID_NUMBER);
@@ -491,14 +324,19 @@ TOKEN parse_token() {
         return t;
     }
     
+
     // Try to match an operator
-    if(is_operator()) {
+    bool hasAssertion = *end == '=';
+    if(is_operator() || hasAssertion) {
         bool isOperator = true;
-        bool isLogical = false;
         bool isDiadicTritwise = false;
-        if(*end == '=') {
-            isLogical = true;
+        // Try to match an assertion
+        if(hasAssertion) {
             next();
+            if(!is_operator()) {
+                t.tag = T_ASSERTION;
+                return t;
+            }
         }
 
         // Read operator characters
@@ -556,7 +394,7 @@ TOKEN parse_token() {
             t.tag = T_DIADIC;
             isDiadicTritwise = true;
         } else if(strcmp_i("&", false)) {
-            *((uint8_t*)t.content) = D_AND;  
+            *((uint8_t*)t.content) = D_AND;
             t.tag = T_DIADIC;
             isDiadicTritwise = true;
         } else if(strcmp_i("^", false)) {
@@ -591,7 +429,7 @@ TOKEN parse_token() {
         // If it is an operator
         if(isOperator) {
             // and it's logical, then replace the tag
-            if(isLogical) {
+            if(hasAssertion) {
                 // If it's not a diadic tritwise operator, throw error
                 if(!isDiadicTritwise) report_error(E_LOGICAL_NON_DIADIC_TRITWISE);
                 t.tag = T_LOGICAL;
@@ -600,6 +438,16 @@ TOKEN parse_token() {
         }
     }
 
-    
-
+    // Try to parse label
+    if(is_uppercase()) {
+        do next(); while(is_lowercase());
+        // If it finds a strange character, it's likely
+        // a wrong label name, so finish it and throw error
+        if(!is_separator()) {
+            do next(); while(!is_separator());
+            report_error(E_INVALID_LABEL);
+        }
+        t.tag = T_LABEL;
+        return t;
+    }
 }

@@ -15,6 +15,7 @@ typedef enum {
     E_INVALID_BASE_LITERAL,
     E_INVALID_NUMBER,
     E_LOGICAL_NON_DIADIC_TRITWISE,
+    E_INVALID_LABEL,
     E_EXPECTED_MONADIC_OPERAND,
     E_EXPECTED_DIADIC_OPERAND,
 } ERROR;
@@ -56,7 +57,10 @@ void report_error(ERROR err) {
         puts("invalid algarism in number");
         break;
     case E_LOGICAL_NON_DIADIC_TRITWISE:
-        puts("attempt to use logic modifier on a non-diadic tritwise operator ");
+        puts("attempt to use logic modifier on a non-diadic tritwise operator");
+        break;
+    case E_INVALID_LABEL:
+        puts("invalid label name");
         break;
     case E_EXPECTED_MONADIC_OPERAND:
         puts("expected operand of monadic operator");
