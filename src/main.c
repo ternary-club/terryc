@@ -35,52 +35,107 @@
 
 
 int main(int argc, char const *argv[]) {
-
     file = open("./test.try");
     if(file <= 0) return 1;
-
-    bool isInsideLabel = false;
 
     // Read buffer
     read(file, mBuffer, MAIN_BUFFER_SIZE);
     end = mBuffer;
     
     TOKEN t = new_token();
-    while(t.tag != T_ENDPOINT) {
+    bool isFirstToken = true;
+    bool isInsideLabel = false;
+    while(1) {
+        if(peep().tag == T_ENDPOINT) break;
+
+        // Remove whitespaces from the beginning of the instruction
         advance_blank();
-        t = parse_token();
-        push(t);
-    }
-
-    // while(1) {
-    //     if(is_etx()) break;
-
-    //     // Remove whitespaces from the beginning of the instruction
-    //     advance_blank();
         
-    //     // Validate variable declaration
-    //     if(parse_token().tag == T_VARSIZE) {
-    //         // Check precedent
-    //         if(*((TAG*)peep().content) != T_NOTOKEN && *((TAG*)peep().content) != T_NEWLINE) {
-    //             report_error(E_UNEXPECTED_VARSIZE);
-    //             continue;
-    //         }
+        // Validate variable declaration
+        t = parse_token();
+        switch(t.tag) {
+            case T_VARSIZE:
+                // Check precedent
+                if(!isFirstToken) {
+                    report_error(E_UNEXPECTED_VARSIZE);
+                    continue;
+                }
+                // Check if it's inside a label
+                if(isInsideLabel) report_error(E_VARDEC_INSIDE_LABEL);
 
-    //         // Check if it's inside a label
-    //         if(isInsideLabel) report_error(E_VARDEC_INSIDE_LABEL);
+                // Push size
+                push(t);
 
-    //         // Check successor
-    //         advance_blank();
-    //         if(parse_var()) {
-    //             advance_blank();
-    //             if(!parse_value()) report_error(E_EXPECTED_VALUE);
-    //         }
-    //         else report_error(E_EXPECTED_NAME);
-    //     }
+                // Check successor
+                advance_blank();
+                t = parse_token();
+                if(t.tag == T_NAME) {
+                    // Push name
+                    push(t);
 
-    //     // Check if it's \n
-    //     parse_newline();
-    // }
+                    // Check successor
+                    advance_blank();
+                    t = parse_token();
+                    if(t.tag == T_INT10
+                    || t.tag == T_INT27
+                    || t.tag == T_INT3
+                    || t.tag == T_INTB3
+                    || t.tag == T_NAME) {
+                        // Push value
+                        push(t);
+                    } else {
+                        // Pop name
+                        pop();
+                        // Pop size
+                        pop();
+                        report_error(E_EXPECTED_VALUE_VARDEC);
+                    }
+                } else {
+                    // Pop size
+                    pop();
+                    report_error(E_EXPECTED_NAME_VARDEC);
+                }
+                isFirstToken = false;
+                continue;
+            case T_INTB3:
+            case T_INT3:
+            case T_INT10:
+            case T_INT27:
+                // Check precedent
+                if(isFirstToken) {
+                    report_error(E_UNEXPECTED_VALUE);
+                    continue;
+                }
+                continue;
+            case T_NAME:
+                // Check precedent
+                if(!isFirstToken) {
+                    report_error(E_UNEXPECTED_NAME);
+                    continue;
+                }
+                // Push name
+                push(t);
+                // Check successor
+                advance_blank();
+                t = parse_token();
+                if(t.tag == T_ASSERTION);
+                else {
+                    report_error(E_EXPECTED_ASSERTION);
+                    // Pop name
+                    pop();
+                }
+                isFirstToken = false;
+                continue;
+            case T_NEWLINE:
+                push(t);
+                isFirstToken = true;
+                continue;
+            case T_ENDPOINT:
+                push(t);
+                isFirstToken = false;
+                continue;
+        }
+    }
 
     for(uint64_t i = 0; i < height; i++) {
         switch(stack[i].tag) {

@@ -6,18 +6,21 @@
 // Errors enum
 typedef enum {
     E_VARDEC_INSIDE_LABEL,
-    E_INVALID_VARIABLE_NAME,
+    E_INVALID_NAME,
+    E_UNEXPECTED_NAME,
     E_UNKNOWN_VARSIZE,
     E_UNEXPECTED_VARSIZE,
-    E_EXPECTED_NAME,
-    E_EXPECTED_VALUE,
+    E_EXPECTED_NAME_VARDEC,
+    E_EXPECTED_VALUE_VARDEC,
     E_UNKNOWN_BASE_LITERAL,
     E_INVALID_BASE_LITERAL,
     E_EMPTY_BASE_LITERAL,
+    E_UNEXPECTED_VALUE,
     E_INVALID_NUMBER,
     E_LOGICAL_NON_DIADIC_TRITWISE,
     E_INVALID_LABEL,
     E_UNKNOWN_REGISTER,
+    E_EXPECTED_ASSERTION,
     E_EXPECTED_MONADIC_OPERAND,
     E_EXPECTED_DIADIC_OPERAND,
 } ERROR;
@@ -28,14 +31,17 @@ void report_error(ERROR err) {
     puts(itoa(first.line + 1));
     puts(":");
     puts(itoa(first.column + 1));
-    puts(": ");
+    puts(":\t");
     puts("\x1b[31merror:\x1b[0m ");
     switch (err) {
     case E_VARDEC_INSIDE_LABEL:
         puts("variable declaration inside label");
         break;
-    case E_INVALID_VARIABLE_NAME:
+    case E_INVALID_NAME:
         puts("invalid variable name");
+        break;
+    case E_UNEXPECTED_NAME:
+        puts("unexpected variable");
         break;
     case E_UNKNOWN_VARSIZE:
         puts("unknown variable size or constant token");
@@ -43,10 +49,10 @@ void report_error(ERROR err) {
     case E_UNEXPECTED_VARSIZE:
         puts("unexpected variable size or constant token");
         break;
-    case E_EXPECTED_NAME:
+    case E_EXPECTED_NAME_VARDEC:
         puts("expected variable name on declaration");
         break;
-    case E_EXPECTED_VALUE:
+    case E_EXPECTED_VALUE_VARDEC:
         puts("expected default value after variable declaration");
         break;
     case E_UNKNOWN_BASE_LITERAL:
@@ -57,6 +63,9 @@ void report_error(ERROR err) {
         break;
     case E_EMPTY_BASE_LITERAL:
         puts("empty number in base literal");
+        break;
+    case E_UNEXPECTED_VALUE:
+        puts("unexpected value");
         break;
     case E_INVALID_NUMBER:
         puts("invalid algarism in number");
@@ -69,6 +78,9 @@ void report_error(ERROR err) {
         break;
     case E_UNKNOWN_REGISTER:
         puts("unknown register");
+        break;
+    case E_EXPECTED_ASSERTION:
+        puts("expected value assertion to variable");
         break;
     case E_EXPECTED_MONADIC_OPERAND:
         puts("expected operand of monadic operator");

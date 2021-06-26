@@ -168,18 +168,6 @@ void next() {
     }
 }
 
-// Previous char
-void prev() {
-    // Jump to previous character
-    end = end == mBuffer ? mBuffer : end - 1;
-    // If its a newline character, then jump to the previous line
-    if(is_newline()) {
-        last.line--;
-        last.column = 0;
-    }
-    else last.column--;
-}
-
 // Advance blank spaces
 void advance_blank() {
     while(is_empty()) next();
@@ -477,7 +465,7 @@ TOKEN parse_token() {
         // a bad variable name, so finish the string, throw error and return
         if(!is_separator()) {
             do next(); while(!is_separator());
-            report_error(E_INVALID_VARIABLE_NAME);
+            report_error(E_INVALID_NAME);
         }
         t.tag = T_NAME;
         return t;
