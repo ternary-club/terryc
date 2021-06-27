@@ -45,6 +45,7 @@ int main(int argc, char const *argv[]) {
     TOKEN t = new_token();
     bool isFirstToken = true;
     bool isInsideLabel = false;
+    bool hasMonadic;
     while(1) {
         if(peep().tag == T_ENDPOINT) break;
 
@@ -54,6 +55,61 @@ int main(int argc, char const *argv[]) {
         // Validate variable declaration
         t = parse_token();
         switch(t.tag) {
+            case T_ASSERTION:
+                hasMonadic = false;
+                // Check precedent
+                if(peep().tag != T_REGISTER && peep().tag != T_NAME) {
+                    report_error(E_UNEXPECTED_ASSERTION);
+                    continue;
+                }
+
+                // Push assertion
+                push(t);
+
+                // Check successor
+                advance_blank();
+                t = parse_token();
+                if(t.tag == T_MONADIC) {
+                    hasMonadic = true;
+                    // Advance monadic operators
+                    do {
+                        // Push monadic
+                        push(t);
+                        parse_token();
+                    } while(t.tag == T_MONADIC);
+                }
+
+                // Exception if register was used on expression
+                if(t.tag == T_REGISTER) {
+                    // Check if any monadic operators were used
+                    if(peep().tag == T_MONADIC)
+                        do pop(); while(peep().tag == T_MONADIC);
+                    report_error(E_READ_REGISTER);
+                }
+
+                if(t.tag == T_LABEL) {
+                    // Check if any monadic operators were used
+                    if(peep().tag == T_MONADIC) {
+                        do pop(); while(peep().tag == T_MONADIC);
+                        report_error(E_OPERAND_LABEL);
+                    }
+                }
+
+                // If a valid value was used
+                if(t.tag == T_INT10
+                || t.tag == T_INT27
+                || t.tag == T_INT3
+                || t.tag == T_INTB3
+                || t.tag == T_NAME
+                || t.tag == T_LABEL) {
+                    // Exception for labels with monadic operators
+                    if(t.tag == T_LABEL && peep().tag == T_MONADIC) {
+                        do pop(); while(peep().tag == T_MONADIC);
+                        report_error(E_OPERAND_LABEL);
+                    }
+
+                }
+
             case T_VARSIZE:
                 // Check precedent
                 if(!isFirstToken) {
@@ -80,7 +136,8 @@ int main(int argc, char const *argv[]) {
                     || t.tag == T_INT27
                     || t.tag == T_INT3
                     || t.tag == T_INTB3
-                    || t.tag == T_NAME) {
+                    || t.tag == T_NAME
+                    || t.tag == T_LABEL) {
                         // Push value
                         push(t);
                     } else {
@@ -102,10 +159,25 @@ int main(int argc, char const *argv[]) {
             case T_INT10:
             case T_INT27:
                 // Check precedent
-                if(isFirstToken) {
-                    report_error(E_UNEXPECTED_VALUE);
+                if(isFirstToken)  report_error(E_UNEXPECTED_VALUE);
+                continue;
+            case T_REGISTER:
+                // Check precedent
+                if(!isFirstToken) {
+                    report_error(E_UNEXPECTED_REGISTER);
                     continue;
                 }
+                // Push register
+                push(t);
+                // Check successor
+                advance_blank();
+                t = parse_token();
+                if(t.tag != T_ASSERTION) {
+                    report_error(E_EXPECTED_ASSERTION);
+                    // Pop name
+                    pop();
+                }
+                isFirstToken = false;
                 continue;
             case T_NAME:
                 // Check precedent
@@ -118,19 +190,37 @@ int main(int argc, char const *argv[]) {
                 // Check successor
                 advance_blank();
                 t = parse_token();
-                if(t.tag == T_ASSERTION);
-                else {
+                if(t.tag != T_ASSERTION) {
                     report_error(E_EXPECTED_ASSERTION);
                     // Pop name
                     pop();
                 }
                 isFirstToken = false;
                 continue;
+            case T_LABEL:
+                // Push label
+                push(t);
+                // Check precedent
+                if(isFirstToken) {
+                    // Check successor
+                    advance_blank();
+                    t = parse_token();
+                    if(t.tag == T_NEWLINE) {
+                        // Push new line
+                        push(t);
+                        isInsideLabel = true;
+                        continue;
+                    }
+                }
+                isFirstToken = false;
+                continue;
             case T_NEWLINE:
+                // Push new line
                 push(t);
                 isFirstToken = true;
                 continue;
             case T_ENDPOINT:
+                // Push end point
                 push(t);
                 isFirstToken = false;
                 continue;
@@ -186,9 +276,6 @@ int main(int argc, char const *argv[]) {
                 break;
             case T_ENDPOINT:
                 puts("end");
-                break;
-            case T_COMMENT:
-                puts("comment");
                 break;
         }
         if(stack[i].tag != T_NEWLINE) puts(" ");

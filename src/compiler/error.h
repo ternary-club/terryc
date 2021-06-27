@@ -18,9 +18,13 @@ typedef enum {
     E_UNEXPECTED_VALUE,
     E_INVALID_NUMBER,
     E_LOGICAL_NON_DIADIC_TRITWISE,
+    E_OPERAND_LABEL,
     E_INVALID_LABEL,
+    E_READ_REGISTER,
+    E_UNEXPECTED_REGISTER,
     E_UNKNOWN_REGISTER,
     E_EXPECTED_ASSERTION,
+    E_UNEXPECTED_ASSERTION,
     E_EXPECTED_MONADIC_OPERAND,
     E_EXPECTED_DIADIC_OPERAND,
 } ERROR;
@@ -71,16 +75,28 @@ void report_error(ERROR err) {
         puts("invalid algarism in number");
         break;
     case E_LOGICAL_NON_DIADIC_TRITWISE:
-        puts("attempt to use logic modifier on a non-diadic tritwise operator");
+        puts("cannot use logic modifier on non-diadic tritwise operator");
+        break;
+    case E_OPERAND_LABEL:
+        puts("invalid use of label as operand");
         break;
     case E_INVALID_LABEL:
         puts("invalid label name");
+        break;
+    case E_READ_REGISTER:
+        puts("cannot use register as value");
+        break;
+    case E_UNEXPECTED_REGISTER:
+        puts("unexpected register");
         break;
     case E_UNKNOWN_REGISTER:
         puts("unknown register");
         break;
     case E_EXPECTED_ASSERTION:
-        puts("expected value assertion to variable");
+        puts("expected value assertion to variable or register");
+        break;
+    case E_UNEXPECTED_ASSERTION:
+        puts("unexpected assertion");
         break;
     case E_EXPECTED_MONADIC_OPERAND:
         puts("expected operand of monadic operator");

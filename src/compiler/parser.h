@@ -178,11 +178,7 @@ TOKEN parse_token() {
     begin();
 
     // Try to parse a comment
-    if(*end == '#') {
-        do next(); while(!is_newline() && !is_etx());
-        t.tag = T_COMMENT;
-        return t;
-    }
+    if(*end == '#') do next(); while(!is_newline() && !is_etx());
     
     // Try to parse a newline
     if(is_newline()) {

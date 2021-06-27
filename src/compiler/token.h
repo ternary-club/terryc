@@ -26,8 +26,7 @@ typedef enum {
     T_NAME,
     T_REGISTER,
     T_ASSERTION,
-    T_ENDPOINT,
-    T_COMMENT
+    T_ENDPOINT
 } TAG;
 
 // Variables enum
