@@ -66,6 +66,11 @@ bool is_etx() {
     return *end == '\x03' || *end == '\0';
 }
 
+// Check if a character is the beginning of a commentary
+bool is_comment() {
+    return *end == '#';
+}
+
 // Check if a character is an underscore
 bool is_underscore() {
     return *end == '_';
@@ -116,6 +121,16 @@ bool is_ternary() {
     return *end >= '0' && *end <= '2';
 }
 
+// Check if a character is zero
+bool is_zero() {
+    return *end == '0';
+}
+
+// Check if a character is an assertion
+bool is_assertion() {
+    return *end == '=';
+}
+
 // Check if a character is part of operator
 bool is_operator() {
     return *end == '+' ||
@@ -136,12 +151,10 @@ bool is_separator() {
 }
 
 // Compare string with interval string
-bool strcmp_i(const char *a, bool c) {
+bool strcmp_i(const char *a) {
     char *b = start;
-    while(*a || b < end) {
-        if(c && 0) puts(ctoa(*a));
+    while(*a || b < end)
         if(*a++ != *b++) return false;
-    }
     return true;
 }
 
@@ -178,7 +191,7 @@ TOKEN parse_token() {
     begin();
 
     // Try to parse a comment
-    if(*end == '#') do next(); while(!is_newline() && !is_etx());
+    if(is_comment()) do next(); while(!is_newline() && !is_etx());
     
     // Try to parse a newline
     if(is_newline()) {
@@ -194,7 +207,7 @@ TOKEN parse_token() {
     }
 
     // Try to parse base literals
-    if(*end == '0') {
+    if(is_zero()) {
         next();
         switch(*end) {
             case 't':
@@ -300,104 +313,99 @@ TOKEN parse_token() {
     }
     
     // Try to match an assertion
-    if(*end == '=') {
+    bool isLogical = false;
+    if(is_assertion()) {
         next();
         if(!is_operator()) {
             t.tag = T_ASSERTION;
             return t;
-        }
+        } else isLogical = true;
     }
 
     // Try to match an operator
-    if(*end == '=' || is_operator()) {
+    if(is_operator()) {
         bool isOperator = true;
-        bool isLogical = true;
         bool isDiadicTritwise = false;
-        // Try to match an assertion
-        if(*end == '=') {
-            next();
-            isLogical = true;
-        }
 
         // Read operator characters
-        do next(); while(!is_operator());
+        do next(); while(is_operator());
 
         // Multidic operator
-        if(strcmp_i("-", false)) {
+        if(strcmp_i("-")) {
             *((uint8_t*)t.content) = M_SUBTRACTION;
             t.tag = T_MULTIDIC;
         }
         // Monadic operators
-        else if(strcmp_i("~", false)) {
+        else if(strcmp_i("~")) {
             *((uint8_t*)t.content) = M_NEGATION;
             t.tag = T_MONADIC;
-        } else if(strcmp_i("+/", false)) {
+        } else if(strcmp_i("+/")) {
             *((uint8_t*)t.content) = M_INCREMENT;
             t.tag = T_MONADIC;
-        } else if(strcmp_i("-/", false)) {
+        } else if(strcmp_i("-/")) {
             *((uint8_t*)t.content) = M_DECREMENT;
             t.tag = T_MONADIC;
-        } else if(strcmp_i("%|", false)) {
+        } else if(strcmp_i("%|")) {
             *((uint8_t*)t.content) = M_ISTRUE;
             t.tag = T_MONADIC;
-        } else if(strcmp_i("%/", false)) {
+        } else if(strcmp_i("%/")) {
             *((uint8_t*)t.content) = M_ISUNKNOWN;
             t.tag = T_MONADIC;
-        } else if(strcmp_i("%-", false)) {
+        } else if(strcmp_i("%-")) {
             *((uint8_t*)t.content) = M_ISFALSE;
             t.tag = T_MONADIC;
-        } else if(strcmp_i("/\\", false)) {
+        } else if(strcmp_i("/\\")) {
             *((uint8_t*)t.content) = M_CLAMPUP;
             t.tag = T_MONADIC;
-        } else if(strcmp_i("\\/", false)) {
+        } else if(strcmp_i("\\/")) {
             *((uint8_t*)t.content) = M_CLAMPDOWN;
             t.tag = T_MONADIC;
         }
         // Diadic operators
-        else if(strcmp_i("+", false)) {
+        else if(strcmp_i("+")) {
             *((uint8_t*)t.content) = D_ADDITION;
             t.tag = T_DIADIC;
-        } else if(strcmp_i("-", false)) {
+        } else if(strcmp_i("-")) {
             *((uint8_t*)t.content) = D_SUBTRACTION;
             t.tag = T_DIADIC;
-        } else if(strcmp_i("*", false)) {
+        } else if(strcmp_i("*")) {
             *((uint8_t*)t.content) = D_MULTIPLICATION;
             t.tag = T_DIADIC;
-        } else if(strcmp_i("/", false)) {
+        } else if(strcmp_i("/")) {
             *((uint8_t*)t.content) = D_DIVISION;
             t.tag = T_DIADIC;
-        } else if(strcmp_i("%", false)) {
+        } else if(strcmp_i("%")) {
             *((uint8_t*)t.content) = D_MODULO;
             t.tag = T_DIADIC;
-        } else if(strcmp_i("|", false)) {
+        } else if(strcmp_i("|")) {
             *((uint8_t*)t.content) = D_OR;
             t.tag = T_DIADIC;
             isDiadicTritwise = true;
-        } else if(strcmp_i("&", false)) {
+        } else if(strcmp_i("&")) {
             *((uint8_t*)t.content) = D_AND;
             t.tag = T_DIADIC;
             isDiadicTritwise = true;
-        } else if(strcmp_i("^", false)) {
+        } else if(strcmp_i("^")) {
             *((uint8_t*)t.content) = D_XOR;
             t.tag = T_DIADIC;
             isDiadicTritwise = true;
-        } else if(strcmp_i("**", false)) {
+        } else if(strcmp_i("**")) {
             *((uint8_t*)t.content) = D_ANY;
             t.tag = T_DIADIC;
             isDiadicTritwise = true;
-        } else if(strcmp_i("/%", false)) {
+        } else if(strcmp_i("/%")) {
             *((uint8_t*)t.content) = D_CONSENSUS;
             t.tag = T_DIADIC;
             isDiadicTritwise = true;
-        } else if(strcmp_i("/+", false)) {
+        } else if(strcmp_i("/+")) {
             *((uint8_t*)t.content) = D_SUM;
             t.tag = T_DIADIC;
             isDiadicTritwise = true;
-        } else if(strcmp_i("~|", false)) {
+        } else if(strcmp_i("~|")) {
             *((uint8_t*)t.content) = D_NOR;
             t.tag = T_DIADIC;
             isDiadicTritwise = true;
-        } else if(strcmp_i("~&", false)) {
+        } else if(strcmp_i("~&")) {
             *((uint8_t*)t.content) = D_NAND;
             t.tag = T_DIADIC;
             isDiadicTritwise = true;
@@ -441,10 +449,10 @@ TOKEN parse_token() {
         if(!is_separator()) isVarSize = false;
 
         // Try to compare variable sizes
-        else if(strcmp_i("const", true))    *((uint8_t*)t.content) = VS_CONST;
-        else if(strcmp_i("tryte", true))    *((uint8_t*)t.content) = VS_TRYTE;
-        else if(strcmp_i("word", true))     *((uint8_t*)t.content) = VS_WORD;
-        else if(strcmp_i("triple", true))   *((uint8_t*)t.content) = VS_TRIPLE;
+        else if(strcmp_i("const"))    *((uint8_t*)t.content) = VS_CONST;
+        else if(strcmp_i("tryte"))    *((uint8_t*)t.content) = VS_TRYTE;
+        else if(strcmp_i("word"))     *((uint8_t*)t.content) = VS_WORD;
+        else if(strcmp_i("triple"))   *((uint8_t*)t.content) = VS_TRIPLE;
         else isVarSize = false;
 
         // Rewind if is not a known variable size or return if it is
@@ -468,6 +476,13 @@ TOKEN parse_token() {
     }
 
     // If it's nothing else, then return T_NOTOKEN
+    do next(); while(
+        !is_separator() &&
+        !is_assertion() &&
+        !is_number() &&
+        !is_letter() &&
+        !is_comment() &&
+        !is_operator());
     t.tag = T_NOTOKEN;
     return t;
 }

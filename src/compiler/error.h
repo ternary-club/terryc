@@ -18,15 +18,16 @@ typedef enum {
     E_UNEXPECTED_VALUE,
     E_INVALID_NUMBER,
     E_LOGICAL_NON_DIADIC_TRITWISE,
-    E_OPERAND_LABEL,
+    E_READ_LABEL,
     E_INVALID_LABEL,
     E_READ_REGISTER,
     E_UNEXPECTED_REGISTER,
     E_UNKNOWN_REGISTER,
     E_EXPECTED_ASSERTION,
     E_UNEXPECTED_ASSERTION,
-    E_EXPECTED_MONADIC_OPERAND,
-    E_EXPECTED_DIADIC_OPERAND,
+    E_EXPECTED_OPERATOR,
+    E_EXPECTED_OPERAND,
+    E_UNKNOWN_TOKEN,
 } ERROR;
 
 // Report an error
@@ -77,8 +78,8 @@ void report_error(ERROR err) {
     case E_LOGICAL_NON_DIADIC_TRITWISE:
         puts("cannot use logic modifier on non-diadic tritwise operator");
         break;
-    case E_OPERAND_LABEL:
-        puts("invalid use of label as operand");
+    case E_READ_LABEL:
+        puts("cannot use label as value");
         break;
     case E_INVALID_LABEL:
         puts("invalid label name");
@@ -98,11 +99,14 @@ void report_error(ERROR err) {
     case E_UNEXPECTED_ASSERTION:
         puts("unexpected assertion");
         break;
-    case E_EXPECTED_MONADIC_OPERAND:
-        puts("expected operand of monadic operator");
-        break;
-    case E_EXPECTED_DIADIC_OPERAND:
+    case E_EXPECTED_OPERAND:
         puts("expected operand");
+        break;
+    case E_EXPECTED_OPERATOR:
+        puts("expected operator");
+        break;
+    case E_UNKNOWN_TOKEN:
+        puts("unknown token");
         break;
     }
     puts("\n");
