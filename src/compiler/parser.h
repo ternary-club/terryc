@@ -449,10 +449,10 @@ TOKEN parse_token() {
         if(!is_separator()) isVarSize = false;
 
         // Try to compare variable sizes
-        else if(strcmp_i("const"))    *((uint8_t*)t.content) = VS_CONST;
-        else if(strcmp_i("tryte"))    *((uint8_t*)t.content) = VS_TRYTE;
-        else if(strcmp_i("word"))     *((uint8_t*)t.content) = VS_WORD;
-        else if(strcmp_i("triple"))   *((uint8_t*)t.content) = VS_TRIPLE;
+        else if(strcmp_i("const"))  *((uint8_t*)t.content) = VS_CONST;
+        else if(strcmp_i("tryte"))  *((uint8_t*)t.content) = VS_TRYTE;
+        else if(strcmp_i("word"))   *((uint8_t*)t.content) = VS_WORD;
+        else if(strcmp_i("triple")) *((uint8_t*)t.content) = VS_TRIPLE;
         else isVarSize = false;
 
         // Rewind if is not a known variable size or return if it is

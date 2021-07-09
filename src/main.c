@@ -43,14 +43,13 @@ int main(int argc, char const *argv[]) {
     
     TOKEN t = new_token();
     // General variables
-    bool isFirstToken = true;
     bool isInsideLabel = false;
     // Specific variables
     bool hasMonadic;
     bool validOperand;
     while(1) {
         if(peep().tag == T_ENDPOINT) break;
-
+        
         // Remove whitespaces from the beginning of the instruction
         advance_blank();
         
@@ -63,163 +62,147 @@ int main(int argc, char const *argv[]) {
                 continue;
             // Size of variable
             case T_VARSIZE:
-                // Check precedent
-                if(!isFirstToken) {
-                    report_error(E_UNEXPECTED_VARSIZE);
-                    continue;
-                }
                 // Check if it's inside a label
                 if(isInsideLabel) report_error(E_VARDEC_INSIDE_LABEL);
-
                 // Push size
                 push(t);
-
                 // Check successor
                 advance_blank();
                 t = parse_token();
-                if(t.tag == T_NAME) {
-                    // Push name
-                    push(t);
-
-                    // Check successor
-                    advance_blank();
-                    t = parse_token();
-                    if(t.tag == T_INT10
-                    || t.tag == T_INT27
-                    || t.tag == T_INT3
-                    || t.tag == T_INTB3
-                    || t.tag == T_NAME) {
-                        // Push value
+                switch(t.tag) {
+                    case T_NAME:
+                        // Push name
                         push(t);
-                    } else {
-                        // Pop name
-                        pop();
+                        // Check successor
+                        advance_blank();
+                        t = parse_token();
+                        switch(t.tag) {
+                            case T_INT10:
+                            case T_INT27:
+                            case T_INT3:
+                            case T_INTB3:
+                            case T_NAME:
+                                push(t);
+                                break;
+                            case T_LABEL:
+                            case T_REGISTER:
+                                // Exception if register or label was used on expression
+                                report_error(t.tag == T_REGISTER ? E_READ_REGISTER : E_READ_LABEL);
+                                // Pop name
+                                pop();
+                                // Pop size
+                                pop();
+                                break;
+                            default:
+                                // Pop name
+                                pop();
+                                // Pop size
+                                pop();
+                                report_error(E_EXPECTED_VALUE_VARDEC);
+                        }
+                        break;
+                    default:
                         // Pop size
                         pop();
-                        report_error(E_EXPECTED_VALUE_VARDEC);
-                    }
-                } else {
-                    // Pop size
-                    pop();
-                    report_error(E_EXPECTED_NAME_VARDEC);
+                        report_error(E_EXPECTED_NAME_VARDEC);
                 }
-                isFirstToken = false;
-                continue;
-            // Numbers
-            case T_INTB3:
-            case T_INT3:
-            case T_INT10:
-            case T_INT27:
-                // Check precedent
-                if(isFirstToken)  report_error(E_UNEXPECTED_VALUE);
                 continue;
             // Assignable entities
             case T_REGISTER:
             case T_NAME:
-                // Check precedent
-                if(isFirstToken) {
-                    // Push assignable entity
-                    push(t);
-
-                    // Check successor
-                    advance_blank();
-                    t = parse_token();
-                    // If it's not assertion, continue
-                    if(t.tag != T_ASSERTION) {
-                        report_error(E_EXPECTED_ASSERTION);
-                        continue;
-                    }
-
-                    // Push assertion
-                    push(t);
-
-                    // Parse equation
-                    while(1) {
-                        // Check successor
-                        advance_blank();
-                        t = parse_token();
-                        if(t.tag == T_MONADIC) {
-                            // Advance monadic operators
-                            do {
-                                // Push monadic
-                                push(t);
-                                next();
-                                parse_token();
-                            } while(t.tag == T_MONADIC);
+                // Push assignable entity
+                push(t);
+                // Check successor
+                advance_blank();
+                t = parse_token();
+                switch(t.tag) {
+                    case T_ASSERTION:
+                        // Push assertion
+                        push(t);
+                        // Parse equation
+                        while(1) {
+                            // Check successor
                             advance_blank();
-                        }
+                            t = parse_token();
+                            // Parse monadic
+                            switch(t.tag) {
+                                case T_MONADIC:
+                                    // Advance monadic operators
+                                    do {
+                                        // Push monadic
+                                        push(t);
+                                        next();
+                                        parse_token();
+                                    } while(t.tag == T_MONADIC);
+                                    advance_blank();
+                                break;
+                            }
+                            // Parse number or variable
+                            switch(t.tag) {
+                                case T_INT10:
+                                case T_INT27:
+                                case T_INT3:
+                                case T_INTB3:
+                                case T_NAME:
+                                    // Push value
+                                    push(t);
+                                    validOperand = true;
+                                    break;
+                                default:
+                                    // Pop monadic operators
+                                    while(peep().tag == T_MONADIC) pop();
+                                    // Exception if register or label was used on expression
+                                    if(t.tag == T_REGISTER || t.tag == T_LABEL)
+                                        report_error(t.tag == T_REGISTER ? E_READ_REGISTER : E_READ_LABEL);
+                                    else report_error(E_EXPECTED_OPERAND);
+                                    // Set it's not a valid operand
+                                    validOperand = false;
+                            }
 
-                        // If a valid value was used
-                        if(t.tag == T_INT10
-                        || t.tag == T_INT27
-                        || t.tag == T_INT3
-                        || t.tag == T_INTB3
-                        || t.tag == T_NAME) {
-                            // Push value
-                            push(t);
-                            validOperand = true;
-                        } else {
-                            // Pop monadic operators
-                            while(peep().tag == T_MONADIC) pop();
-                            // Exception if register or label was used on expression
-                            if(t.tag == T_REGISTER || t.tag == T_LABEL)
-                                report_error(t.tag == T_REGISTER ? E_READ_REGISTER : E_READ_LABEL);
-                            else report_error(E_EXPECTED_OPERAND);
-                            validOperand = false;
-                        }
-                        
-                        // Check successor
-                        advance_blank();
-                        t = parse_token();
-                        // If it's a diadic operator
-                        if(t.tag == T_DIADIC
-                        || t.tag == T_MULTIDIC) {
+                            // Check successor
+                            advance_blank();
+                            t = parse_token();
+                            // If it's a diadic operator
+                            if(t.tag != T_DIADIC
+                            && t.tag != T_MULTIDIC) break;
                             // Push operator
-                            if(validOperand) push(t);
-                            continue;
-                        } else if(!is_separator()) {
-                            // If it's something else
-                            report_error(E_EXPECTED_OPERATOR);
-                            // Pop value
-                            pop();
-                            // Pop monadic operators
-                            while(peep().tag == T_MONADIC) pop();
+                            else if(validOperand) push(t);
                         }
-                        break;
-                    }
+                    break;
                 }
-                isFirstToken = false;
+                // Push new line
+                switch(t.tag) {
+                    case T_NEWLINE:
+                        push(t);
+                        break;
+                }
                 continue;
             // Labels
             case T_LABEL:
                 // Push label
                 push(t);
-                // Check precedent
-                if(isFirstToken) {
-                    // Check successor
-                    advance_blank();
-                    t = parse_token();
-                    if(t.tag == T_NEWLINE) {
-                        // Push new line
+                // Check successor
+                advance_blank();
+                t = parse_token();
+                // Push new line
+                switch(t.tag) {
+                    case T_NEWLINE:
                         push(t);
-                        isInsideLabel = true;
-                        continue;
-                    }
+                        break;
                 }
-                isFirstToken = false;
                 continue;
             // New lines
             case T_NEWLINE:
                 // Push new line
                 push(t);
-                isFirstToken = true;
                 continue;
             // End point
             case T_ENDPOINT:
                 // Push end point
                 push(t);
-                isFirstToken = false;
-                continue;
+                break;
+            default:
+                report_error(E_UNKNOWN_TOKEN);
         }
     }
 
@@ -269,9 +252,6 @@ int main(int argc, char const *argv[]) {
                 break;
             case T_ASSERTION:
                 puts("=");
-                break;
-            case T_ENDPOINT:
-                puts("end");
                 break;
         }
         if(stack[i].tag != T_NEWLINE) puts(" ");

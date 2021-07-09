@@ -20,11 +20,13 @@ typedef enum {
     E_LOGICAL_NON_DIADIC_TRITWISE,
     E_READ_LABEL,
     E_INVALID_LABEL,
+    E_UNEXPECTED_LABEL,
     E_READ_REGISTER,
     E_UNEXPECTED_REGISTER,
     E_UNKNOWN_REGISTER,
     E_EXPECTED_ASSERTION,
     E_UNEXPECTED_ASSERTION,
+    E_INVALID_ASSERTION,
     E_EXPECTED_OPERATOR,
     E_EXPECTED_OPERAND,
     E_UNKNOWN_TOKEN,
@@ -84,6 +86,9 @@ void report_error(ERROR err) {
     case E_INVALID_LABEL:
         puts("invalid label name");
         break;
+    case E_UNEXPECTED_LABEL:
+        puts("unexpected label");
+        break;
     case E_READ_REGISTER:
         puts("cannot use register as value");
         break;
@@ -98,6 +103,9 @@ void report_error(ERROR err) {
         break;
     case E_UNEXPECTED_ASSERTION:
         puts("unexpected assertion");
+        break;
+    case E_INVALID_ASSERTION:
+        // puts("invalid assertion to non-register or variable token");
         break;
     case E_EXPECTED_OPERAND:
         puts("expected operand");
