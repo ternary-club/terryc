@@ -113,7 +113,7 @@ bool is_newline() {
 
 // Check if a character is a balanced ternary number
 bool is_balanced() {
-    return *end == '!' || *end == '0' || *end == '1';
+    return *end == 'N' || *end == '0' || *end == '1';
 }
 
 // Check if a character is a ternary number
