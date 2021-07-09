@@ -1,3 +1,4 @@
+
 name: terry CI
 
 on:
@@ -7,11 +8,19 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
-
+  release:
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v2
-    - name: make
-      run: make
+    - name: build
+      run: make |
+        echo "done!"
+    - uses: "marvinpinto/action-automatic-releases@latest"
+      with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "latest"
+          prerelease: true
+          title: "Development Build"
+          files: terry
+      
