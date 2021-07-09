@@ -21,6 +21,7 @@ typedef enum {
     E_READ_LABEL,
     E_INVALID_LABEL,
     E_UNEXPECTED_LABEL,
+    E_UNEXPECTED_LABEL_TOKEN,
     E_READ_REGISTER,
     E_UNEXPECTED_REGISTER,
     E_UNKNOWN_REGISTER,
@@ -28,6 +29,7 @@ typedef enum {
     E_UNEXPECTED_ASSERTION,
     E_INVALID_ASSERTION,
     E_EXPECTED_OPERATOR,
+    E_UNEXPECTED_OPERATOR,
     E_EXPECTED_OPERAND,
     E_UNKNOWN_TOKEN,
 } ERROR;
@@ -89,6 +91,9 @@ void report_error(ERROR err) {
     case E_UNEXPECTED_LABEL:
         puts("unexpected label");
         break;
+    case E_UNEXPECTED_LABEL_TOKEN:
+        puts("unexpected token after label");
+        break;
     case E_READ_REGISTER:
         puts("cannot use register as value");
         break;
@@ -109,6 +114,9 @@ void report_error(ERROR err) {
         break;
     case E_EXPECTED_OPERAND:
         puts("expected operand");
+        break;
+    case E_UNEXPECTED_OPERATOR:
+        puts("unexpected operator");
         break;
     case E_EXPECTED_OPERATOR:
         puts("expected operator");

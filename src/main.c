@@ -33,6 +33,13 @@
 #include "compiler/errors.h"
 #endif
 
+// Bad token flag enum
+typedef enum {
+    B_GOOD,
+    B_BAD_FIRST,
+    B_BAD,
+} BAD_FLAG;
+
 int main(int argc, char const *argv[]) {
     file = open("./test.try");
     if(file <= 0) return 1;
@@ -43,6 +50,7 @@ int main(int argc, char const *argv[]) {
     
     TOKEN t = new_token();
     // General variables
+    BAD_FLAG badFlag = B_GOOD;
     bool isInsideLabel = false;
     // Specific variables
     bool hasMonadic;
@@ -54,14 +62,50 @@ int main(int argc, char const *argv[]) {
         advance_blank();
         
         // Validate variable declaration
-        t = parse_token();
+        if(badFlag == B_BAD_FIRST)
+            badFlag = B_BAD;
+        else t = parse_token();
+        // Switch tag
         switch(t.tag) {
             // Error
             case T_NOTOKEN:
                 report_error(E_UNKNOWN_TOKEN);
                 continue;
+            // Operators
+            case T_MONADIC:
+            case T_DIADIC:
+            case T_MULTIDIC:
+            case T_LOGICAL:
+                // Loose token error
+                if(badFlag == B_BAD) {
+                    report_error(E_UNEXPECTED_OPERATOR);
+                    continue;
+                }
+                continue;
+            case T_INTB3:
+            case T_INT3:
+            case T_INT10:
+            case T_INT27:
+                // Loose token error
+                if(badFlag == B_BAD) {
+                    report_error(E_UNEXPECTED_VALUE);
+                    continue;
+                }
+                continue;
+            case T_ASSERTION:
+                // Loose token error
+                if(badFlag == B_BAD) {
+                    report_error(E_UNEXPECTED_ASSERTION);
+                    continue;
+                }
+                continue;
             // Size of variable
             case T_VARSIZE:
+                // Loose token error
+                if(badFlag == B_BAD) {
+                    report_error(E_UNEXPECTED_VARSIZE);
+                    continue;
+                }
                 // Check if it's inside a label
                 if(isInsideLabel) report_error(E_VARDEC_INSIDE_LABEL);
                 // Push size
@@ -110,6 +154,11 @@ int main(int argc, char const *argv[]) {
             // Assignable entities
             case T_REGISTER:
             case T_NAME:
+                // Loose token error
+                if(badFlag == B_BAD) {
+                    report_error(t.tag == T_REGISTER ? E_UNEXPECTED_REGISTER : E_UNEXPECTED_NAME);
+                    continue;
+                }
                 // Push assignable entity
                 push(t);
                 // Check successor
@@ -132,7 +181,7 @@ int main(int argc, char const *argv[]) {
                                         // Push monadic
                                         push(t);
                                         next();
-                                        parse_token();
+                                        t = parse_token();
                                     } while(t.tag == T_MONADIC);
                                     advance_blank();
                                 break;
@@ -158,7 +207,6 @@ int main(int argc, char const *argv[]) {
                                     // Set it's not a valid operand
                                     validOperand = false;
                             }
-
                             // Check successor
                             advance_blank();
                             t = parse_token();
@@ -168,33 +216,47 @@ int main(int argc, char const *argv[]) {
                             // Push operator
                             else if(validOperand) push(t);
                         }
-                    break;
+                        break;
                 }
-                // Push new line
+                // Push new line or end point
                 switch(t.tag) {
                     case T_NEWLINE:
+                    case T_ENDPOINT:
                         push(t);
-                        break;
+                        continue;
+                    default:
+                        // Unexpected token error
+                        badFlag = B_BAD_FIRST;
                 }
                 continue;
             // Labels
             case T_LABEL:
+                // Loose token error
+                if(badFlag == B_BAD) {
+                    report_error(E_UNEXPECTED_LABEL);
+                    continue;
+                }
                 // Push label
                 push(t);
                 // Check successor
                 advance_blank();
                 t = parse_token();
-                // Push new line
                 switch(t.tag) {
                     case T_NEWLINE:
+                    case T_ENDPOINT:
+                        // Push new line or end point
                         push(t);
-                        break;
+                        continue;
+                    default:
+                        // Unexpected token error
+                        badFlag = B_BAD_FIRST;
                 }
                 continue;
             // New lines
             case T_NEWLINE:
                 // Push new line
                 push(t);
+                badFlag = B_GOOD;
                 continue;
             // End point
             case T_ENDPOINT:
