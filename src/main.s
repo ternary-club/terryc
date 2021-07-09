@@ -1,5 +1,3 @@
-#include "driver/calls.h"
-
 .intel_syntax noprefix
 .text
 .globl _start, syscall,
@@ -12,7 +10,7 @@ mov rsi,rsp
 and rsp,-16
 call main
 mov rdi,rax
-mov rax,SYS_exit
+mov rax,60 # SYS_exit
 syscall
 ret
 
