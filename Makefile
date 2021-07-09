@@ -1,4 +1,3 @@
-	EXENAME := terry
 build:
 	gcc -pedantic -s -O2 -Werror \
 	-nostdlib \
@@ -9,11 +8,12 @@ build:
 	-fno-builtin \
 	-fno-stack-protector \
 	-static \
-	src/main.S src/main.c \
-	-o $$EXENAME \
+	./src/main.S ./src/main.c \
+	-o terry \
 	\
-	&& strip -R .comment $$EXENAME
+	&& strip -R .comment terry
+	exit
 
 build-run:
 	make build
-	./$$EXENAME
+	./terry
