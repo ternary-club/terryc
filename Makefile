@@ -8,7 +8,7 @@ build:
 	-fno-builtin \
 	-fno-stack-protector \
 	-static \
-	./src/main.S ./src/main.c \
+	./src/main.s ./src/main.c \
 	-o terry \
 	\
 	&& strip -R .comment terry
