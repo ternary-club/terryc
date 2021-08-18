@@ -25,6 +25,7 @@ typedef enum {
     E_READ_REGISTER,
     E_UNEXPECTED_REGISTER,
     E_UNKNOWN_REGISTER,
+    E_WRONG_ASSERTION,
     E_EXPECTED_ASSERTION,
     E_UNEXPECTED_ASSERTION,
     E_INVALID_ASSERTION,
@@ -105,8 +106,11 @@ void report_error(ERROR err) {
     case E_UNKNOWN_REGISTER:
         puts("unknown register");
         break;
-    case E_EXPECTED_ASSERTION:
+    case E_WRONG_ASSERTION:
         puts("expected value assertion to variable or register");
+        break;
+    case E_EXPECTED_ASSERTION:
+        puts("expected assertion");
         break;
     case E_UNEXPECTED_ASSERTION:
         puts("unexpected assertion");
@@ -124,7 +128,7 @@ void report_error(ERROR err) {
         puts("expected operator");
         break;
     case E_UNSPACED_OPERATOR:
-        puts("expected separator after operator");
+        puts("expected separator before operand");
         break;
     case E_UNKNOWN_OPERATOR:
         puts("unknown operator");

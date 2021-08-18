@@ -87,19 +87,13 @@ int main(int argc, char const *argv[]) {
             case T_INT10:
             case T_INT27:
                 // Loose token error
-                if(badFlag == B_BAD) {
-                    report_error(E_UNEXPECTED_VALUE);
-                    continue;
-                }
+                if(badFlag == B_BAD) report_error(E_UNEXPECTED_VALUE);
                 continue;
             case T_ASSERTION:
                 // Loose token error
-                if(badFlag == B_BAD) {
-                    report_error(E_UNEXPECTED_ASSERTION);
-                    continue;
-                }
+                if(badFlag == B_BAD) report_error(E_UNEXPECTED_ASSERTION);
                 continue;
-            // Size of variable
+            // Assignable entities and varsize
             case T_VARSIZE:
                 // Loose token error
                 if(badFlag == B_BAD) {
@@ -108,50 +102,28 @@ int main(int argc, char const *argv[]) {
                 }
                 // Check if it's inside a label
                 if(isInsideLabel) report_error(E_VARDEC_INSIDE_LABEL);
-                // Push size
+                // Push variable size
                 push(t);
                 // Check successor
                 advance_blank();
                 t = parse_token();
-                switch(t.tag) {
-                    case T_NAME:
-                        // Push name
-                        push(t);
-                        // Check successor
-                        advance_blank();
-                        t = parse_token();
-                        switch(t.tag) {
-                            case T_INT10:
-                            case T_INT27:
-                            case T_INT3:
-                            case T_INTB3:
-                            case T_NAME:
-                                push(t);
-                                break;
-                            case T_LABEL:
-                            case T_REGISTER:
-                                // Exception if register or label was used on expression
-                                report_error(t.tag == T_REGISTER ? E_READ_REGISTER : E_READ_LABEL);
-                                // Pop name
-                                pop();
-                                // Pop size
-                                pop();
-                                break;
-                            default:
-                                // Pop name
-                                pop();
-                                // Pop size
-                                pop();
-                                report_error(E_EXPECTED_VALUE_VARDEC);
-                        }
-                        break;
-                    default:
-                        // Pop size
-                        pop();
-                        report_error(E_EXPECTED_NAME_VARDEC);
+                // Check if next token is a variable name
+                if(t.tag != T_NAME) {
+                    report_error(E_EXPECTED_VALUE_VARDEC);
+                    // Pop size
+                    pop();
+                        // Push new line or end point
+                    switch(t.tag) {
+                        case T_NEWLINE:
+                        case T_ENDPOINT:
+                            push(t);
+                            continue;
+                        default:
+                            // Unexpected token error
+                            badFlag = B_BAD_FIRST;
+                    }
+                    continue;
                 }
-                continue;
-            // Assignable entities
             case T_REGISTER:
             case T_NAME:
                 // Loose token error
@@ -222,6 +194,10 @@ int main(int argc, char const *argv[]) {
                             else if(validOperand) push(t);
                         }
                         break;
+                    default:
+                        report_error(E_EXPECTED_ASSERTION);
+                        // Pop name
+                        pop();
                 }
                 // Push new line or end point
                 switch(t.tag) {
