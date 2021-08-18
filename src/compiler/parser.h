@@ -147,7 +147,7 @@ bool is_operator() {
 
 // Check if a character is a separator
 bool is_separator() {
-    return is_operator() || is_newline() || is_empty() || is_etx();
+    return is_newline() || is_empty() || is_etx();
 }
 
 // Compare string with interval string
@@ -212,7 +212,7 @@ TOKEN parse_token() {
         switch(*end) {
             case 't':
                 next();
-                // If hasn't even 1 algarism, then rewind and return
+                // If it hasn't got got even 1 algarism, then rewind and return
                 if(is_separator()) report_error(E_EMPTY_BASE_LITERAL);
                 while(is_ternary()) next();
                 // If it finds a strange character, it's likely
@@ -225,7 +225,7 @@ TOKEN parse_token() {
                 return t;
             case 'b':
                 next();
-                // If hasn't even 1 algarism, then rewind and break
+                // If it hasn't got even 1 algarism, then rewind and break
                 if(is_separator()) report_error(E_EMPTY_BASE_LITERAL);
                 while(is_balanced()) next();
                 // If it finds a strange character, it's likely
@@ -238,7 +238,7 @@ TOKEN parse_token() {
                 return t;
             case 'h':
                 next();
-                // If hasn't even 1 algarism, then rewind and break
+                // If it hasn't got even 1 algarism, then rewind and break
                 if(is_separator()) report_error(E_EMPTY_BASE_LITERAL);
                 while(is_heptavintimal()) next();
                 // If it finds a strange character, it's likely
@@ -254,7 +254,7 @@ TOKEN parse_token() {
                 // then it's an unknown base literal, so finish the string and throw error
                 if(is_lowercase()) {
                     next();
-                    // If hasn't even 1 algarism, then rewind and break
+                    // If it hasn't got even 1 algarism, then rewind and break
                     if(is_separator()) {
                         report_error(E_EMPTY_BASE_LITERAL);
                         rewind();
@@ -272,7 +272,7 @@ TOKEN parse_token() {
         }
     }
     
-    // Try to a register
+    // Try to parse register
     if(is_number()) {
         bool isExistingRegister = true;
         int8_t registerNum = *end - '0';
@@ -299,7 +299,7 @@ TOKEN parse_token() {
         } else rewind();
     }
 
-    // Try to match base 10 number
+    // Try to parse base 10 number
     if(is_number()) {
         do next(); while(is_number());
         // If it finds a strange character, it's likely
@@ -312,7 +312,7 @@ TOKEN parse_token() {
         return t;
     }
     
-    // Try to match an assertion
+    // Try to parse an assertion
     bool isLogical = false;
     if(is_assertion()) {
         next();
@@ -322,9 +322,8 @@ TOKEN parse_token() {
         } else isLogical = true;
     }
 
-    // Try to match an operator
+    // Try to parse an operator
     if(is_operator()) {
-        bool isOperator = true;
         bool isDiadicTritwise = false;
 
         // Read operator characters
@@ -410,20 +409,22 @@ TOKEN parse_token() {
             t.tag = T_DIADIC;
             isDiadicTritwise = true;
         } else {
-            rewind();
-            isOperator = false;
+            // Isn't known operator
+            report_error(E_UNKNOWN_OPERATOR);
+            // Invalid operators are treated as multidic so they don't cause
+            // additional problems
+            t.tag = T_MULTIDIC;
         }
         
-        // If it is an operator
-        if(isOperator) {
-            // and it's logical, then replace the tag
-            if(isLogical) {
-                // If it's not a diadic tritwise operator, throw error
-                if(!isDiadicTritwise) report_error(E_LOGICAL_NON_DIADIC_TRITWISE);
-                t.tag = T_LOGICAL;
-            }
-            return t;
+        // If it is a logical operator replace the tag
+        if(isLogical) {
+            // If it's not a diadic tritwise operator, throw error
+            if(!isDiadicTritwise) report_error(E_LOGICAL_NON_DIADIC_TRITWISE);
+            t.tag = T_LOGICAL;
         }
+        // Check if operators are separated
+        if(!is_separator()) report_error(E_UNSPACED_OPERATOR);
+        return t;
     }
 
     // Try to parse label

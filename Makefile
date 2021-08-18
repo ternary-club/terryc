@@ -1,4 +1,5 @@
 build:
+	@echo ==== building =========================
 	gcc -pedantic -s -O2 -Werror \
 	-nostdlib \
 	-fno-asynchronous-unwind-tables \
@@ -16,4 +17,5 @@ build:
 
 build-run:
 	make build
-	./terry
+	@echo ==== running ==========================
+	@./terry

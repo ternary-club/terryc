@@ -41,7 +41,7 @@ typedef enum {
 } BAD_FLAG;
 
 int main(int argc, char const *argv[]) {
-    file = open("./test.try");
+    file = open("./lineTest.try");
     if(file <= 0) return 1;
 
     // Read buffer
@@ -173,20 +173,24 @@ int main(int argc, char const *argv[]) {
                             // Check successor
                             advance_blank();
                             t = parse_token();
-                            // Parse monadic
+                            // Parse monadic and multidic
                             switch(t.tag) {
                                 case T_MONADIC:
-                                    // Advance monadic operators
-                                    do {
-                                        // Push monadic
+                                case T_MULTIDIC:
+                                    // Push current operator
+                                    push(t);
+                                    advance_blank();
+                                    t = parse_token();
+                                    // Advance operators
+                                    while(t.tag == T_MONADIC || t.tag == T_MULTIDIC) {
+                                        // Push operator
                                         push(t);
                                         next();
                                         t = parse_token();
-                                    } while(t.tag == T_MONADIC);
-                                    advance_blank();
+                                    }
                                 break;
                             }
-                            // Parse number or variable
+                            // Parse number or variable (or other)
                             switch(t.tag) {
                                 case T_INT10:
                                 case T_INT27:
@@ -196,7 +200,11 @@ int main(int argc, char const *argv[]) {
                                     // Push value
                                     push(t);
                                     validOperand = true;
+                                    // Next
+                                    advance_blank();
+                                    t = parse_token();
                                     break;
+                                // If it's something else, abort
                                 default:
                                     // Pop monadic operators
                                     while(peep().tag == T_MONADIC) pop();
@@ -207,9 +215,6 @@ int main(int argc, char const *argv[]) {
                                     // Set it's not a valid operand
                                     validOperand = false;
                             }
-                            // Check successor
-                            advance_blank();
-                            t = parse_token();
                             // If it's a diadic operator
                             if(t.tag != T_DIADIC
                             && t.tag != T_MULTIDIC) break;

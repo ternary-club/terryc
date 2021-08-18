@@ -30,6 +30,8 @@ typedef enum {
     E_INVALID_ASSERTION,
     E_EXPECTED_OPERATOR,
     E_UNEXPECTED_OPERATOR,
+    E_UNSPACED_OPERATOR,
+    E_UNKNOWN_OPERATOR,
     E_EXPECTED_OPERAND,
     E_UNKNOWN_TOKEN,
 } ERROR;
@@ -120,6 +122,12 @@ void report_error(ERROR err) {
         break;
     case E_EXPECTED_OPERATOR:
         puts("expected operator");
+        break;
+    case E_UNSPACED_OPERATOR:
+        puts("expected separator after operator");
+        break;
+    case E_UNKNOWN_OPERATOR:
+        puts("unknown operator");
         break;
     case E_UNKNOWN_TOKEN:
         puts("unknown token");
