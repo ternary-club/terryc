@@ -41,7 +41,7 @@ typedef enum {
 } BAD_FLAG;
 
 int main(int argc, char const *argv[]) {
-    file = open("./lineTest.try");
+    file = open("./test.try");
     if(file <= 0) return 1;
 
     // Read buffer

@@ -1,6 +1,5 @@
 tryte a 0bN10N10
 a = 0bN10N10
-b = a+b
+b = a + b
 EaeEae
-a = ~ b
-a = ~b
+a = ~ b % c /% d ^ e | \/ - f - g
