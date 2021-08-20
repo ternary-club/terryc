@@ -2,5 +2,7 @@ tryte a = ~ 0hEAEMENKKK + 2
 word b = 0t1021012 / \/ 2
 a = 0bN10N10
 b = a /% b
+
 Label
-a = ~ b % c /% d ^ e | \/ - f - g
+    a = ~ b % c /% d ^ e | \/ - f - g
+    1a = 5

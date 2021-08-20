@@ -212,9 +212,9 @@ TOKEN parse_token() {
         switch(*end) {
             case 't':
                 next();
-                // If it hasn't got got even 1 algarism, then rewind and return
+                // If it has got 0 algarism, then throw error
                 if(is_separator()) report_error(E_EMPTY_BASE_LITERAL);
-                while(is_ternary()) next();
+                else while(is_ternary()) next();
                 // If it finds a strange character, it's likely
                 // a wrong ternary number, so finish it and throw error
                 if(!is_separator()) {
@@ -225,9 +225,9 @@ TOKEN parse_token() {
                 return t;
             case 'b':
                 next();
-                // If it hasn't got even 1 algarism, then rewind and break
+                // If it has got 0 algarism, then throw error
                 if(is_separator()) report_error(E_EMPTY_BASE_LITERAL);
-                while(is_balanced()) next();
+                else while(is_balanced()) next();
                 // If it finds a strange character, it's likely
                 // a wrong trinary number, so finish it and throw error
                 if(!is_separator()) {
@@ -238,9 +238,9 @@ TOKEN parse_token() {
                 return t;
             case 'h':
                 next();
-                // If it hasn't got even 1 algarism, then rewind and break
+                // If it has got 0 algarism, then throw error
                 if(is_separator()) report_error(E_EMPTY_BASE_LITERAL);
-                while(is_heptavintimal()) next();
+                else while(is_heptavintimal()) next();
                 // If it finds a strange character, it's likely
                 // a wrong heptavintimal number, so finish it and throw error
                 if(!is_separator()) {
@@ -253,15 +253,11 @@ TOKEN parse_token() {
                 // If it doesn't fit anywhere else and if it's a character,
                 // then it's an unknown base literal, so finish the string and throw error
                 if(is_lowercase()) {
-                    next();
-                    // If it hasn't got even 1 algarism, then rewind and break
-                    if(is_separator()) {
-                        report_error(E_EMPTY_BASE_LITERAL);
-                        rewind();
-                        break;
-                    }
-                    do next(); while(!is_separator());
                     report_error(E_UNKNOWN_BASE_LITERAL);
+                    next();
+                    // If it has got 0 algarism, then throw error
+                    if(is_separator()) report_error(E_EMPTY_BASE_LITERAL);
+                    else while(!is_separator()) next();
                     t.tag = T_INT10;
                     return t;
                 }
@@ -412,11 +408,11 @@ TOKEN parse_token() {
             // Isn't known operator
             report_error(E_UNKNOWN_OPERATOR);
             // Invalid operators are treated as multidic so they don't cause
-            // additional problems
+            // additional inter token problems
             t.tag = T_MULTIDIC;
         }
         
-        // If it is a logical operator replace the tag
+        // If it's a logical operator, replace the tag
         if(isLogical) {
             // If it's not a diadic tritwise operator, throw error
             if(!isDiadicTritwise) report_error(E_LOGICAL_NON_DIADIC_TRITWISE);

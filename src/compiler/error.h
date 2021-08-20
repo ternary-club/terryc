@@ -28,7 +28,7 @@ typedef enum {
     E_WRONG_ASSERTION,
     E_EXPECTED_ASSERTION,
     E_UNEXPECTED_ASSERTION,
-    E_INVALID_ASSERTION,
+    E_UNTARGETED_ASSERTION,
     E_EXPECTED_OPERATOR,
     E_UNEXPECTED_OPERATOR,
     E_UNSPACED_OPERATOR,
@@ -115,8 +115,8 @@ void report_error(ERROR err) {
     case E_UNEXPECTED_ASSERTION:
         puts("unexpected assertion");
         break;
-    case E_INVALID_ASSERTION:
-        // puts("invalid assertion to non-register or variable token");
+    case E_UNTARGETED_ASSERTION:
+        puts("no target found before assertion");
         break;
     case E_EXPECTED_OPERAND:
         puts("expected operand");
