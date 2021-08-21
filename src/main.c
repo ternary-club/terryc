@@ -33,23 +33,35 @@
 #include "compiler/errors.h"
 #endif
 
-// Bad token flag enum
-typedef enum {
-    B_GOOD,
-    B_BAD_FIRST,
-    B_BAD,
-} BAD_FLAG;
+// Fetch succeeding token not skipping any characters.
+void fetch_only(TOKEN *t) {
+    *t = parse_token();
+}
+
+// Skip whitespaces and fetch succeeding token.
+void fetch(TOKEN *t) {
+    while(is_empty()) next();
+    fetch_only(t);
+}
 
 // Skip the rest of the line (instruction). Used to skip unexpected
-// tokens that exceed any grammar structure. Be sure to throw the error
-// before calling this.
-void skip_line(TOKEN *t) {
+// tokens that exceed any grammar structure and throw error if there
+// are any exceeding tokens. Tolerates "offset" exceeding tokens
+// before throwing an error
+void forward(TOKEN *t, uint8_t offset) {
+    // The amount of fetched tokens
+    uint8_t tokenCount = 0;
+    // Check if instruction ends here
+    if(t->tag == T_ENDPOINT || t->tag == T_NEWLINE) return;
     // Until it's a new line or an end point
     while(t->tag != T_NEWLINE && t->tag != T_ENDPOINT) {
+        // Report error on "offset" token
+        if(tokenCount++ == offset) report_error(E_EXPECTED_END);
         // Fetch successor
-        advance_blank();
-        *t = parse_token();
+        fetch(t);
     }
+    // Push ending token
+    push(*t);
 }
 
 // This function was isolated from the main parsing switch because many
@@ -62,24 +74,25 @@ void skip_line(TOKEN *t) {
 //  if(B) foo();
 // case C:
 //  if(C) foo();
-// ...
-void parse_equation(TOKEN *t) {
+// break;
+bool parse_equation(TOKEN *t) {
     // Dummy variable
     TOKEN tName;
+    // If the equation didn't find strange tokens until the end
+    bool succeeded = true;
     // Parse equation
     while(1) {
         // Parse monadic and multidic
         if(t->tag == T_MONADIC || t->tag == T_MULTIDIC) {
             // Push current operator
             push(*t);
-            advance_blank();
-            *t = parse_token();
+            fetch(t);
             // Advance operators
             while(t->tag == T_MONADIC || t->tag == T_MULTIDIC) {
                 // Push operator
                 push(*t);
                 next();
-                *t = parse_token();
+                fetch_only(t);
             }
         }
 
@@ -93,13 +106,14 @@ void parse_equation(TOKEN *t) {
                 // Push value
                 push(*t);
                 // Fetch successor
-                advance_blank();
-                *t = parse_token();
+                fetch(t);
                 break;
             // If it's something else, skip
             default:
+                // The parsing did find strange tokens
+                succeeded = false;
                 // Try to fix it by pushing a dummy variable
-                tName = new_token();
+                tName = NEW_TOKEN;
                 tName.tag = T_NAME;
                 push(tName);
                 // Exception if register or label was used on expression
@@ -107,11 +121,7 @@ void parse_equation(TOKEN *t) {
                     report_error(t->tag == T_REGISTER ? E_READ_REGISTER : E_READ_LABEL);
                 else report_error(E_EXPECTED_OPERAND);
                 // If isn't a diadic or multidic operator, ignore current token
-                if(t->tag != T_DIADIC && t->tag != T_MULTIDIC) {
-                    // Fetch successor
-                    advance_blank();
-                    *t = parse_token();
-                }
+                if(t->tag != T_DIADIC && t->tag != T_MULTIDIC) fetch(t);
         }
 
         // Check if there's a diadic or multidic operator to connect expressions
@@ -121,15 +131,14 @@ void parse_equation(TOKEN *t) {
                 // Push operator
                 push(*t);
                 // Fetch successor
-                advance_blank();
-                *t = parse_token();
+                fetch(t);
                 continue;
             case T_ENDPOINT:
             case T_NEWLINE:
                 // Push end
                 push(*t);
             default:
-                return;
+                return succeeded;
         }
     }
 }
@@ -142,18 +151,18 @@ int main(int argc, char const *argv[]) {
     read(file, mBuffer, MAIN_BUFFER_SIZE);
     end = mBuffer;
     
-    TOKEN t = new_token();
+    TOKEN t = NEW_TOKEN;
     // General variables
     bool isInsideLabel = false;
     // Specific variables
     bool hasMonadic;
+    bool succeeded;
+    uint8_t paramCount;
     while(1) {
-        if(peep().tag == T_ENDPOINT) break;
+        if(t.tag == T_ENDPOINT) break;
         
-        // Remove whitespaces from the beginning of the instruction
-        advance_blank();
-        // Validate variable declaration
-        t = parse_token();
+        // Fetch successor
+        fetch(&t);
 
         // Switch tag (always the first tag of instruction)
         switch(t.tag) {
@@ -183,23 +192,118 @@ int main(int argc, char const *argv[]) {
                 report_error(E_UNTARGETED_ASSERTION);
                 // And try to fix it by pushing a dummy variable name
                 // e.g.: $ foo =
-                TOKEN tName = new_token();
+                TOKEN tName = NEW_TOKEN;
                 tName.tag = T_NAME;
                 // Push variable name
                 push(tName);
                 // Push assertion
                 push(t);
                 // Fetch successor
-                advance_blank();
-                t = parse_token();
+                fetch(&t);
                 // Parse equation
                 // e.g.: $ foo = 2 + 5
-                parse_equation(&t);
-                // If it doesn't end there, throw error
-                if(t.tag != T_ENDPOINT && t.tag != T_NEWLINE) {
-                    report_error(E_EXPECTED_END);
-                    // Skip every token after this one
-                    skip_line(&t);
+                succeeded = parse_equation(&t);
+                // Skip every token after this one
+                forward(&t, (uint8_t)!succeeded);
+                continue;
+            // Command
+            // e.g.: $ goto
+            case T_COMMAND:
+                // Parameter count for error handling
+                paramCount = 0;
+                // Push command
+                push(t);
+                // Check if it's inside a label
+                if(!isInsideLabel) report_error(E_COMMAND_OUTSIDE_LABEL);
+                switch(*((uint8_t*)t.content)) {
+                    // e.g.: $ store
+                    case C_STORE:
+                        // Fetch successor
+                        fetch(&t);
+                        // Parse first argument (value) and count legitimate parameter
+                        // e.g.: $ store 8
+                        if(parse_equation(&t)) paramCount++;
+                        // Parse second argument (register)
+                        // e.g.: $ store 8 1a
+                        if(t.tag == T_REGISTER) {
+                            // Push register
+                            push(t);
+                            // Fetch successor
+                            fetch(&t);
+                            // Count legitimate parameter
+                            paramCount++;
+                        } else {
+                            // Throw error
+                            report_error(E_EXPECTED_REGISTER);
+                            // Try to fix it by pushing an assertion
+                            TOKEN tRegister = NEW_TOKEN;
+                            tRegister.tag = T_REGISTER;
+                            push(tRegister);
+                        }
+                        // Skip every token after this one
+                        forward(&t, 2 - paramCount);
+                        break;
+                    // e.g.: $ load
+                    case C_LOAD:
+                        // Fetch successor
+                        fetch(&t);
+                        // Parse first argument (register)
+                        // e.g.: $ load 3b
+                        if(t.tag == T_REGISTER) {
+                            // Push register
+                            push(t);
+                            // Fetch successor
+                            fetch(&t);
+                            // Count legitimate parameter
+                            paramCount++;
+                        } else {
+                            // Throw error
+                            report_error(E_EXPECTED_REGISTER);
+                            // Try to fix it by pushing an assertion
+                            TOKEN tRegister = NEW_TOKEN;
+                            tRegister.tag = T_REGISTER;
+                            push(tRegister);
+                        }
+                        // Parse second argument (value) and count legitimate parameter
+                        // e.g.: $ load 3b foo
+                        if(parse_equation(&t)) paramCount++;
+                        // Skip every token after this one
+                        forward(&t, 2 - paramCount);
+                        break;
+                    // e.g.: $ call
+                    case C_CALL:
+                        // Fetch successor
+                        fetch(&t);
+                        // Parse argument (value) and count legitimate parameter
+                        // e.g.: $ call 1
+                        if(parse_equation(&t)) paramCount++;
+                        // Skip every token after this one
+                        forward(&t, 1 - paramCount);
+                        break;
+                    // e.g.: $ goto
+                    case C_GOTO:
+                        // Fetch successor
+                        fetch(&t);
+                        // Parse argument (label)
+                        // e.g.: $ goto 3b
+                        if(t.tag == T_LABEL) {
+                            // Push label
+                            push(t);
+                            // Fetch successor
+                            fetch(&t);
+                            // Count legitimate parameter
+                            paramCount++;
+                        } else {
+                            // Throw error
+                            report_error(E_EXPECTED_LABEL);
+                            // Try to fix it by pushing an assertion
+                            TOKEN tLabel = NEW_TOKEN;
+                            tLabel.tag = T_LABEL;
+                            push(tLabel);
+                        }
+                        // Skip every token after this one
+                        forward(&t, 1 - paramCount);
+                        break;
                 }
                 continue;
             // Variable size
@@ -210,21 +314,19 @@ int main(int argc, char const *argv[]) {
                 // Check if it's inside a label
                 if(isInsideLabel) report_error(E_VARDEC_INSIDE_LABEL);
                 // Fetch successor
-                advance_blank();
-                t = parse_token();
+                fetch(&t);
                 // Check if it has a variable name 
                 // e.g.: $ tryte foo
                 if(t.tag == T_NAME) {
                     // Push name
                     push(t);
                     // Fetch successor
-                    advance_blank();
-                    t = parse_token();
+                    fetch(&t);
                 } else {
                     // Throw error
                     report_error(E_EXPECTED_NAME_VARDEC);
                     // Try to fix it by pushing a dummy variable name
-                    TOKEN tName = new_token();
+                    TOKEN tName = NEW_TOKEN;
                     tName.tag = T_NAME;
                     push(tName);
                 }
@@ -235,25 +337,20 @@ int main(int argc, char const *argv[]) {
                     // Push assertion
                     push(t);
                     // Fetch successor
-                    advance_blank();
-                    t = parse_token();
+                    fetch(&t);
                 } else {
                     // Throw error
                     report_error(E_EXPECTED_ASSERTION);
                     // Try to fix it by pushing an assertion
-                    TOKEN tAssertion = new_token();
+                    TOKEN tAssertion = NEW_TOKEN;
                     tAssertion.tag = T_ASSERTION;
                     push(tAssertion);
                 }
 
                 // Parse equation
-                parse_equation(&t);
-                // If it doesn't end there, throw error
-                if(t.tag != T_ENDPOINT && t.tag != T_NEWLINE) {
-                    report_error(E_EXPECTED_END);
-                    // Skip every token after this one
-                    skip_line(&t);
-                }
+                succeeded = parse_equation(&t);
+                // Skip every token after this one
+                forward(&t, (uint8_t)!succeeded);
                 continue;
             // Assignable entity
             // e.g.: $ 1a
@@ -263,8 +360,7 @@ int main(int argc, char const *argv[]) {
                 // Push assignable entity
                 push(t);
                 // Fetch successor
-                advance_blank();
-                t = parse_token();
+                fetch(&t);
 
                 // Check if it has an assertion
                 // e.g.: $ 1a =
@@ -273,42 +369,32 @@ int main(int argc, char const *argv[]) {
                     // Push assertion
                     push(t);
                     // Fetch successor
-                    advance_blank();
-                    t = parse_token();
+                    fetch(&t);
                 } else {
                     // Throw error
                     report_error(E_EXPECTED_ASSERTION);
                     // Try to fix it by pushing an assertion
-                    TOKEN tAssertion = new_token();
+                    TOKEN tAssertion = NEW_TOKEN;
                     tAssertion.tag = T_ASSERTION;
                     push(tAssertion);
                 }
 
                 // Parse equation
-                parse_equation(&t);
-                // If it doesn't end there, throw error
-                if(t.tag != T_ENDPOINT && t.tag != T_NEWLINE) {
-                    report_error(E_EXPECTED_END);
-                    // Skip every token after this one
-                    skip_line(&t);
-                }
+                succeeded = parse_equation(&t);
+                // Skip every token after this one
+                forward(&t, (uint8_t)!succeeded);
                 continue;
             // Labels
             // e.g.: $ Foo
             case T_LABEL:
+                // Mark inside of label
+                isInsideLabel = true;
                 // Push label
                 push(t);
                 // Fetch successor
-                advance_blank();
-                t = parse_token();
-                // If it doesn't end there, throw error
-                if(t.tag != T_ENDPOINT && t.tag != T_NEWLINE) {
-                    report_error(E_EXPECTED_END);
-                    // Skip every token after this one
-                    skip_line(&t);
-                }
-                // Push instruction end
-                push(t);
+                fetch(&t);
+                // Skip every token after this one
+                forward(&t, 0);
                 continue;
             // New lines
             // e.g.: $ \n
@@ -317,11 +403,10 @@ int main(int argc, char const *argv[]) {
                 // Push new line
                 push(t);
                 // Skip multiple new lines
-                do {
+                do
                     // Fetch successor
-                    advance_blank();
-                    t = parse_token();
-                } while(t.tag == T_NEWLINE);
+                    fetch(&t);
+                while(t.tag == T_NEWLINE);
                 continue;
             // End point
             // e.g.: $ \0
@@ -381,6 +466,9 @@ int main(int argc, char const *argv[]) {
                 break;
             case T_ASSERTION:
                 puts("=");
+                break;
+            case T_COMMAND:
+                puts("comm");
                 break;
         }
         if(stack[i].tag != T_NEWLINE) puts(" ");

@@ -16,17 +16,6 @@
 #define MAIN_BUFFER_SIZE 243
 #define TOKEN_BUFFER_SIZE 27
 
-// Integers enum
-typedef enum {
-    I_NAN,
-    I_ILITERAL,
-    I_INUM,
-    I_INT27,
-    I_INT10,
-    I_INT3,
-    I_INTB3,
-} INTTYPE;
-
 // File
 intptr file;
 
@@ -181,13 +170,9 @@ void next() {
     }
 }
 
-// Advance blank spaces
-void advance_blank() {
-    while(is_empty()) next();
-}
-
+// Detect token
 TOKEN parse_token() {
-    TOKEN t = new_token();
+    TOKEN t = NEW_TOKEN;
     begin();
 
     // Try to parse a comment
@@ -455,6 +440,29 @@ TOKEN parse_token() {
         // Rewind if is not a known variable size or return if it is
         if(isVarSize) {
             t.tag = T_VARSIZE;
+            return t;
+        } else rewind();
+    }
+    
+    // Try to parse command
+    if(is_lowercase()) {
+        bool isCommand = true;
+        do next(); while(is_lowercase());
+
+        // If it finds a strange character, it's likely not
+        // a command, so mark it as false
+        if(!is_separator()) isCommand = false;
+
+        // Try to compare commands
+        else if(strcmp_i("store"))  *((uint8_t*)t.content) = C_STORE;
+        else if(strcmp_i("load"))   *((uint8_t*)t.content) = C_LOAD;
+        else if(strcmp_i("call"))   *((uint8_t*)t.content) = C_CALL;
+        else if(strcmp_i("goto"))   *((uint8_t*)t.content) = C_GOTO;
+        else isCommand = false;
+
+        // Rewind if is not a known variable size or return if it is
+        if(isCommand) {
+            t.tag = T_COMMAND;
             return t;
         } else rewind();
     }

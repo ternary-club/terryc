@@ -26,6 +26,7 @@ typedef enum {
     T_NAME,
     T_REGISTER,
     T_ASSERTION,
+    T_COMMAND,
     T_ENDPOINT
 } TAG;
 
@@ -67,6 +68,14 @@ typedef enum {
     D_NAND,
 } DIADIC;
 
+// Commands enum
+typedef enum {
+    C_STORE,
+    C_LOAD,
+    C_CALL,
+    C_GOTO,
+} COMMAND;
+
 // Coordinate struct
 typedef struct {
     uint16_t line;
@@ -89,6 +98,9 @@ uint64_t height = 0;
 COORDINATE first;
 COORDINATE last;
 
+// Empty default token
+#define NEW_TOKEN (TOKEN){T_NOTOKEN, first, last };
+
 // Push token into stack
 void push(TOKEN t) {
     if(!height++) stack = (TOKEN*)heap();
@@ -103,16 +115,7 @@ TOKEN pop() {
     return t;
 }
 
-// View top item of the stack
+// View top item of stack
 TOKEN peep() {
    return height ? *(TOKEN*)((uint64_t)heap() - sizeof(TOKEN)) : (TOKEN){T_NOTOKEN};
-}
-
-// New token from tag
-TOKEN new_token() {
-    return (TOKEN){
-        T_NOTOKEN,
-        first,
-        last,
-    };
 }

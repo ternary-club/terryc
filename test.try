@@ -6,3 +6,5 @@ b = a /% b
 Label
     a = ~ b % c /% d ^ e | \/ - f - g
     1a = 5
+    call 1
+    goto Label

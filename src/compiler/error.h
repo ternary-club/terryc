@@ -6,6 +6,7 @@
 // Errors enum
 typedef enum {
     E_VARDEC_INSIDE_LABEL,
+    E_COMMAND_OUTSIDE_LABEL,
     E_INVALID_NAME,
     E_EXPECTED_NAME_VARDEC,
     E_UNKNOWN_BASE_LITERAL,
@@ -14,10 +15,12 @@ typedef enum {
     E_UNEXPECTED_NUMBER,
     E_INVALID_NUMBER,
     E_LOGICAL_NON_DIADIC_TRITWISE,
+    E_EXPECTED_LABEL,
     E_READ_LABEL,
     E_INVALID_LABEL,
     E_EXPECTED_END,
     E_READ_REGISTER,
+    E_EXPECTED_REGISTER,
     E_UNKNOWN_REGISTER,
     E_EXPECTED_ASSERTION,
     E_UNTARGETED_ASSERTION,
@@ -39,6 +42,9 @@ void report_error(ERROR err) {
     switch (err) {
     case E_VARDEC_INSIDE_LABEL:
         puts("variable declaration inside label");
+        break;
+    case E_COMMAND_OUTSIDE_LABEL:
+        puts("command outside label");
         break;
     case E_INVALID_NAME:
         puts("invalid variable name");
@@ -67,6 +73,9 @@ void report_error(ERROR err) {
     case E_READ_LABEL:
         puts("cannot use label as value");
         break;
+    case E_EXPECTED_LABEL:
+        puts("expected label");
+        break;
     case E_INVALID_LABEL:
         puts("invalid label name");
         break;
@@ -75,6 +84,9 @@ void report_error(ERROR err) {
         break;
     case E_READ_REGISTER:
         puts("cannot use register as value");
+        break;
+    case E_EXPECTED_REGISTER:
+        puts("expected register");
         break;
     case E_UNKNOWN_REGISTER:
         puts("unknown register");
