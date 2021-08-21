@@ -7,30 +7,22 @@
 typedef enum {
     E_VARDEC_INSIDE_LABEL,
     E_INVALID_NAME,
-    E_UNEXPECTED_NAME,
-    E_UNKNOWN_VARSIZE,
-    E_UNEXPECTED_VARSIZE,
     E_EXPECTED_NAME_VARDEC,
-    E_EXPECTED_VALUE_VARDEC,
     E_UNKNOWN_BASE_LITERAL,
     E_INVALID_BASE_LITERAL,
     E_EMPTY_BASE_LITERAL,
-    E_UNEXPECTED_VALUE,
+    E_UNEXPECTED_NUMBER,
     E_INVALID_NUMBER,
     E_LOGICAL_NON_DIADIC_TRITWISE,
     E_READ_LABEL,
     E_INVALID_LABEL,
-    E_UNEXPECTED_LABEL,
     E_UNEXPECTED_LABEL_TOKEN,
     E_READ_REGISTER,
-    E_UNEXPECTED_REGISTER,
     E_UNKNOWN_REGISTER,
-    E_WRONG_ASSERTION,
     E_EXPECTED_ASSERTION,
-    E_UNEXPECTED_ASSERTION,
     E_UNTARGETED_ASSERTION,
-    E_EXPECTED_OPERATOR,
     E_UNEXPECTED_OPERATOR,
+    E_EXPECTED_OPERATOR,
     E_UNSPACED_OPERATOR,
     E_UNKNOWN_OPERATOR,
     E_EXPECTED_OPERAND,
@@ -52,14 +44,8 @@ void report_error(ERROR err) {
     case E_INVALID_NAME:
         puts("invalid variable name");
         break;
-    case E_UNEXPECTED_NAME:
-        puts("unexpected variable");
-        break;
     case E_UNKNOWN_VARSIZE:
         puts("unknown variable size or constant token");
-        break;
-    case E_UNEXPECTED_VARSIZE:
-        puts("unexpected variable size or constant token");
         break;
     case E_EXPECTED_NAME_VARDEC:
         puts("expected variable name on declaration");
@@ -76,8 +62,8 @@ void report_error(ERROR err) {
     case E_EMPTY_BASE_LITERAL:
         puts("empty number in base literal");
         break;
-    case E_UNEXPECTED_VALUE:
-        puts("unexpected value");
+    case E_UNEXPECTED_NUMBER:
+        puts("unexpected number");
         break;
     case E_INVALID_NUMBER:
         puts("invalid algarism in number");
@@ -91,17 +77,11 @@ void report_error(ERROR err) {
     case E_INVALID_LABEL:
         puts("invalid label name");
         break;
-    case E_UNEXPECTED_LABEL:
-        puts("unexpected label");
-        break;
     case E_UNEXPECTED_LABEL_TOKEN:
         puts("unexpected token after label");
         break;
     case E_READ_REGISTER:
         puts("cannot use register as value");
-        break;
-    case E_UNEXPECTED_REGISTER:
-        puts("unexpected register");
         break;
     case E_UNKNOWN_REGISTER:
         puts("unknown register");
@@ -111,9 +91,6 @@ void report_error(ERROR err) {
         break;
     case E_EXPECTED_ASSERTION:
         puts("expected assertion");
-        break;
-    case E_UNEXPECTED_ASSERTION:
-        puts("unexpected assertion");
         break;
     case E_UNTARGETED_ASSERTION:
         puts("no target found before assertion");
