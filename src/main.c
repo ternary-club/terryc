@@ -33,6 +33,8 @@
 #include "compiler/errors.h"
 #endif
 
+#define INFINITE 0xFF
+
 // Fetch succeeding token not skipping any characters.
 void fetch_only(TOKEN *t) {
     *t = parse_token();
@@ -49,14 +51,14 @@ void fetch(TOKEN *t) {
 // are any exceeding tokens. Tolerates "offset" exceeding tokens
 // before throwing an error
 void forward(TOKEN *t, uint8_t offset) {
-    // The amount of fetched tokens
-    uint8_t tokenCount = 0;
     // Check if instruction ends here
     if(t->tag == T_ENDPOINT || t->tag == T_NEWLINE) return;
+    // The amount of fetched tokens
+    uint8_t tokenCount = 0;
     // Until it's a new line or an end point
     while(t->tag != T_NEWLINE && t->tag != T_ENDPOINT) {
         // Report error on "offset" token
-        if(tokenCount++ == offset) report_error(E_EXPECTED_END);
+        if(offset != INFINITE && tokenCount++ == offset) report_error(E_EXPECTED_END);
         // Fetch successor
         fetch(t);
     }
@@ -110,8 +112,6 @@ bool parse_equation(TOKEN *t) {
                 break;
             // If it's something else, skip
             default:
-                // The parsing did find strange tokens
-                succeeded = false;
                 // Try to fix it by pushing a dummy variable
                 tName = NEW_TOKEN;
                 tName.tag = T_NAME;
@@ -119,9 +119,16 @@ bool parse_equation(TOKEN *t) {
                 // Exception if register or label was used on expression
                 if(t->tag == T_REGISTER || t->tag == T_LABEL)
                     report_error(t->tag == T_REGISTER ? E_READ_REGISTER : E_READ_LABEL);
-                else report_error(E_EXPECTED_OPERAND);
-                // If isn't a diadic or multidic operator, ignore current token
-                if(t->tag != T_DIADIC && t->tag != T_MULTIDIC) fetch(t);
+                else {
+                    // The parsing did find strange tokens
+                    succeeded = false;
+                    report_error(E_EXPECTED_OPERAND);
+                }
+                // If it's a connector operator, it's probably a missing operand, so don't ignore it.
+                // If it's an ending token, it's probably a bad ending equation, so don't ignore it.
+                // If it's anything else, it's probably a bad operand, so ignore it.
+                if(t->tag != T_DIADIC && t->tag != T_MULTIDIC
+                && t->tag != T_ENDPOINT && t->tag != T_NEWLINE) fetch(t);
         }
 
         // Check if there's a diadic or multidic operator to connect expressions
@@ -174,6 +181,8 @@ int main(int argc, char const *argv[]) {
             case T_LOGICAL:
                 // Throw error
                 report_error(E_UNEXPECTED_OPERATOR);
+                // Skip every token after this one
+                forward(&t, INFINITE);
                 continue;
             // Loose numbers
             // e.g.: $ 5
@@ -183,6 +192,8 @@ int main(int argc, char const *argv[]) {
             case T_INT27:
                 // Throw error
                 report_error(E_UNEXPECTED_NUMBER);
+                // Skip every token after this one
+                forward(&t, INFINITE);
                 continue;
             // Loose assertion
             // e.g.: $ =
