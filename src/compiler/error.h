@@ -44,14 +44,8 @@ void report_error(ERROR err) {
     case E_INVALID_NAME:
         puts("invalid variable name");
         break;
-    case E_UNKNOWN_VARSIZE:
-        puts("unknown variable size or constant token");
-        break;
     case E_EXPECTED_NAME_VARDEC:
         puts("expected variable name on declaration");
-        break;
-    case E_EXPECTED_VALUE_VARDEC:
-        puts("expected default value after variable declaration");
         break;
     case E_UNKNOWN_BASE_LITERAL:
         puts("unknown base literal");
@@ -85,9 +79,6 @@ void report_error(ERROR err) {
         break;
     case E_UNKNOWN_REGISTER:
         puts("unknown register");
-        break;
-    case E_WRONG_ASSERTION:
-        puts("expected value assertion to variable or register");
         break;
     case E_EXPECTED_ASSERTION:
         puts("expected assertion");

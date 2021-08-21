@@ -40,6 +40,18 @@ typedef enum {
     B_BAD,
 } BAD_FLAG;
 
+// Skip the rest of the line (instruction). Used to skip unexpected
+// tokens that exceed any grammar structure. Be sure to throw the error
+// before calling this.
+void skip_line(TOKEN *t) {
+    // Until it's a new line or an end point
+    while(t->tag != T_NEWLINE && t->tag != T_ENDPOINT) {
+        // Fetch successor
+        advance_blank();
+        *t = parse_token();
+    }
+}
+
 // This function was isolated from the main parsing switch because many
 // structures accept equations and too many switch cases being executed
 // in a pipeline changes the code architecture in an unnatural way.
@@ -52,29 +64,25 @@ typedef enum {
 //  if(C) foo();
 // ...
 void parse_equation(TOKEN *t) {
+    // Dummy variable
+    TOKEN tName;
     // Parse equation
     while(1) {
-        // Check successor
-        advance_blank();
-        *t = parse_token();
         // Parse monadic and multidic
-        switch(t->tag) {
-            case T_MONADIC:
-            case T_MULTIDIC:
-                // Push current operator
+        if(t->tag == T_MONADIC || t->tag == T_MULTIDIC) {
+            // Push current operator
+            push(*t);
+            advance_blank();
+            *t = parse_token();
+            // Advance operators
+            while(t->tag == T_MONADIC || t->tag == T_MULTIDIC) {
+                // Push operator
                 push(*t);
-                advance_blank();
+                next();
                 *t = parse_token();
-                // Advance operators
-                while(t->tag == T_MONADIC || t->tag == T_MULTIDIC) {
-                    // Push operator
-                    push(*t);
-                    next();
-                    *t = parse_token();
-                }
-            break;
+            }
         }
-        bool validOperand;
+
         // Parse number or variable (or other)
         switch(t->tag) {
             case T_INT10:
@@ -84,27 +92,47 @@ void parse_equation(TOKEN *t) {
             case T_NAME:
                 // Push value
                 push(*t);
-                validOperand = true;
-                // Next
+                // Fetch successor
                 advance_blank();
                 *t = parse_token();
                 break;
-            // If it's something else, abort
+            // If it's something else, skip
             default:
-                // Pop monadic operators
-                while(peep().tag == T_MONADIC) pop();
+                // Try to fix it by pushing a dummy variable
+                tName = new_token();
+                tName.tag = T_NAME;
+                push(tName);
                 // Exception if register or label was used on expression
                 if(t->tag == T_REGISTER || t->tag == T_LABEL)
                     report_error(t->tag == T_REGISTER ? E_READ_REGISTER : E_READ_LABEL);
                 else report_error(E_EXPECTED_OPERAND);
-                // Set it's not a valid operand
-                validOperand = false;
+                // If isn't a diadic or multidic operator, ignore current token
+                if(t->tag != T_DIADIC && t->tag != T_MULTIDIC) {
+                    // Fetch successor
+                    advance_blank();
+                    *t = parse_token();
+                }
         }
-        // If it's a diadic operator
-        if(t->tag != T_DIADIC
-        && t->tag != T_MULTIDIC) break;
-        // Push operator
-        else if(validOperand) push(*t);
+
+        // Check if there's a diadic or multidic operator to connect expressions
+        switch(t->tag) {
+            case T_MULTIDIC:
+            case T_DIADIC:
+                // Push operator
+                push(*t);
+                // Fetch successor
+                advance_blank();
+                *t = parse_token();
+                continue;
+            case T_ENDPOINT:
+            case T_NEWLINE:
+                // Push end
+                push(*t);
+                return;
+            default:
+                // Throw error
+                report_error(E_EXPECTED_OPERATOR);
+        }
     }
 }
 
@@ -118,155 +146,170 @@ int main(int argc, char const *argv[]) {
     
     TOKEN t = new_token();
     // General variables
-    BAD_FLAG badFlag = B_GOOD;
     bool isInsideLabel = false;
     // Specific variables
     bool hasMonadic;
-    bool validOperand;
     while(1) {
         if(peep().tag == T_ENDPOINT) break;
         
         // Remove whitespaces from the beginning of the instruction
         advance_blank();
-        
         // Validate variable declaration
-        if(badFlag == B_BAD_FIRST) badFlag = B_BAD;
-        else t = parse_token();
+        t = parse_token();
 
         // Switch tag (always the first tag of instruction)
         switch(t.tag) {
-            // Unknown token
-            case T_NOTOKEN:
-                report_error(E_UNKNOWN_TOKEN);
-                continue;
             // Loose operators
+            // e.g.: $ +
             case T_MONADIC:
             case T_DIADIC:
             case T_MULTIDIC:
             case T_LOGICAL:
+                // Throw error
+                report_error(E_UNEXPECTED_OPERATOR);
                 continue;
             // Loose numbers
+            // e.g.: $ 5
             case T_INTB3:
             case T_INT3:
             case T_INT10:
             case T_INT27:
+                // Throw error
+                report_error(E_UNEXPECTED_NUMBER);
                 continue;
             // Loose assertion
+            // e.g.: $ =
             case T_ASSERTION:
                 // If it's just a loose assertion, it's probably an invalid
                 // variable assertion, so throw error
                 report_error(E_UNTARGETED_ASSERTION);
-                // And try to fix it by adding a dummy variable name
+                // And try to fix it by pushing a dummy variable name
+                // e.g.: $ foo =
                 TOKEN tName = new_token();
                 tName.tag = T_NAME;
                 // Push variable name
                 push(tName);
                 // Push assertion
                 push(t);
+                // Fetch successor
+                advance_blank();
+                t = parse_token();
                 // Parse equation
+                // e.g.: $ foo = 2 + 5
                 parse_equation(&t);
+                continue;
             // Variable size
+            // e.g.: $ tryte
             case T_VARSIZE:
-                // If the instruction begins with a variable size, it's probably
-                // a variable declaration.
-
                 // Push variable size
                 push(t);
-                // Check successor
-                advance_blank();
-                t = parse_token();
-                // Check if next token is a variable name
-                if(t.tag != T_NAME) {
-                    // If it's not, throw error
-                    report_error(E_EXPECTED_NAME_VARDEC);
-                    // Try to fix it by adding a dummy variable name
-                    TOKEN tName = new_token();
-                    tName.tag = T_NAME;
-                    push(tName);
-                }
-                // Check if next token is an assertion
-                if(t.tag != T_ASSERTION) {
-                    // If it's not, throw error
-                    report_error(E_EXPECTED_NAME_VARDEC);
-                    // Try to fix it by adding a dummy variable name
-                    TOKEN tName = new_token();
-                    tName.tag = T_NAME;
-                    push(tName);
-                }
-                // Parse equation
-                parse_equation(&t);
                 // Check if it's inside a label
                 if(isInsideLabel) report_error(E_VARDEC_INSIDE_LABEL);
-            case T_REGISTER:
-            case T_NAME:
-                // Loose token error
-                if(badFlag == B_BAD) {
-                    report_error(t.tag == T_REGISTER ? E_UNEXPECTED_REGISTER : E_UNEXPECTED_NAME);
-                    continue;
-                }
-                // If it's an assignable entity, push it and check it's successor.
-                // This checking is necessary because other switch cases may end up here.
-                if(t.tag == T_REGISTER || t.tag == T_NAME) {
-                    push(t);
-                    // Check successor
-                    advance_blank();
-                    t = parse_token();
-                }
-                
-                // Check current token
-                switch(t.tag) {
-                    case T_ASSERTION:
-                        // Push assertion
-                        push(t);
-                        // Parse equation
-                        parse_equation(&t);
-                        break;
-                    default:
-                        report_error(E_EXPECTED_ASSERTION);
-                        // Pop name
-                        pop();
-                }
-                // Push new line or end point
-                switch(t.tag) {
-                    case T_NEWLINE:
-                    case T_ENDPOINT:
-                        push(t);
-                        continue;
-                    default:
-                        // Unexpected token error
-                        badFlag = B_BAD_FIRST;
-                }
-                continue;
-            // Labels
-            case T_LABEL:
-                // Loose token error
-                if(badFlag == B_BAD) {
-                    report_error(E_UNEXPECTED_LABEL);
-                    continue;
-                }
-                // Push label
-                push(t);
-                // Check successor
+                // Fetch successor
                 advance_blank();
                 t = parse_token();
-                switch(t.tag) {
-                    case T_NEWLINE:
-                    case T_ENDPOINT:
-                        // Push new line or end point
-                        push(t);
-                        continue;
-                    default:
-                        // Unexpected token error
-                        badFlag = B_BAD_FIRST;
+                // Check if it has a variable name 
+                // e.g.: $ tryte foo
+                if(t.tag == T_NAME) {
+                    // Push name
+                    push(t);
+                    // Fetch successor
+                    advance_blank();
+                    t = parse_token();
+                } else {
+                    // Throw error
+                    report_error(E_EXPECTED_NAME_VARDEC);
+                    // Try to fix it by pushing a dummy variable name
+                    TOKEN tName = new_token();
+                    tName.tag = T_NAME;
+                    push(tName);
                 }
+               
+                // Check if it has an assertion
+                // e.g.: $ tryte foo =
+                if(t.tag == T_ASSERTION) {
+                    // Push assertion
+                    push(t);
+                    // Fetch successor
+                    advance_blank();
+                    t = parse_token();
+                } else {
+                    // Throw error
+                    report_error(E_EXPECTED_ASSERTION);
+                    // Try to fix it by pushing an assertion
+                    TOKEN tAssertion = new_token();
+                    tAssertion.tag = T_ASSERTION;
+                    push(tAssertion);
+                }
+
+                // Parse equation
+                parse_equation(&t);
+                continue;
+            // Assignable entity
+            // e.g.: $ 1a
+            // e.g.: $ foo
+            case T_REGISTER:
+            case T_NAME:
+                // Push assignable entity
+                push(t);
+                // Fetch successor
+                advance_blank();
+                t = parse_token();
+
+                // Check if it has an assertion
+                // e.g.: $ 1a =
+                // e.g.: $ foo =
+                if(t.tag == T_ASSERTION) {
+                    // Push assertion
+                    push(t);
+                    // Fetch successor
+                    advance_blank();
+                    t = parse_token();
+                } else {
+                    // Throw error
+                    report_error(E_EXPECTED_ASSERTION);
+                    // Try to fix it by pushing an assertion
+                    TOKEN tAssertion = new_token();
+                    tAssertion.tag = T_ASSERTION;
+                    push(tAssertion);
+                }
+
+                // Parse equation
+                parse_equation(&t);
+                continue;
+            // Labels
+            // e.g.: $ Foo
+            case T_LABEL:
+                // Push label
+                push(t);
+                // Fetch successor
+                advance_blank();
+                t = parse_token();
+                // If it doesn't end there, throw error
+                if(t.tag != T_ENDPOINT && t.tag != T_NEWLINE) {
+                    report_error(E_UNEXPECTED_LABEL_TOKEN);
+                    // Skip every token after this one
+                    skip_line(&t);
+                }
+                // Push instruction end
+                push(t);
                 continue;
             // New lines
+            // e.g.: $ \n
+            // e.g.: $ \r\n
             case T_NEWLINE:
                 // Push new line
                 push(t);
-                badFlag = B_GOOD;
+                // Skip multiple new lines
+                do {
+                    // Fetch successor
+                    advance_blank();
+                    t = parse_token();
+                } while(t.tag == T_NEWLINE);
                 continue;
             // End point
+            // e.g.: $ \0
+            // e.g.: $ \x03
             case T_ENDPOINT:
                 // Push end point
                 push(t);
