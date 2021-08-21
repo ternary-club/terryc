@@ -13,7 +13,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: build
+    - name: "Build"
       run: make |
         echo "done!"
     - uses: "marvinpinto/action-automatic-releases@latest"
