@@ -144,7 +144,7 @@ bool parse_equation(TOKEN *t) {
 }
 
 int main(int argc, char const *argv[]) {
-    file = open("./test.try");
+    file = open(argv[1]);
     if(file <= 0) return 1;
 
     // Read buffer

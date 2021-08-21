@@ -18,4 +18,4 @@ build:
 build-run:
 	make build
 	@echo ==== running ==========================
-	@./terry
+	@./terry ./test.try
