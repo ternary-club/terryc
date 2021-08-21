@@ -128,10 +128,8 @@ void parse_equation(TOKEN *t) {
             case T_NEWLINE:
                 // Push end
                 push(*t);
-                return;
             default:
-                // Throw error
-                report_error(E_EXPECTED_OPERATOR);
+                return;
         }
     }
 }
@@ -197,6 +195,12 @@ int main(int argc, char const *argv[]) {
                 // Parse equation
                 // e.g.: $ foo = 2 + 5
                 parse_equation(&t);
+                // If it doesn't end there, throw error
+                if(t.tag != T_ENDPOINT && t.tag != T_NEWLINE) {
+                    report_error(E_EXPECTED_END);
+                    // Skip every token after this one
+                    skip_line(&t);
+                }
                 continue;
             // Variable size
             // e.g.: $ tryte
@@ -244,6 +248,12 @@ int main(int argc, char const *argv[]) {
 
                 // Parse equation
                 parse_equation(&t);
+                // If it doesn't end there, throw error
+                if(t.tag != T_ENDPOINT && t.tag != T_NEWLINE) {
+                    report_error(E_EXPECTED_END);
+                    // Skip every token after this one
+                    skip_line(&t);
+                }
                 continue;
             // Assignable entity
             // e.g.: $ 1a
@@ -276,6 +286,12 @@ int main(int argc, char const *argv[]) {
 
                 // Parse equation
                 parse_equation(&t);
+                // If it doesn't end there, throw error
+                if(t.tag != T_ENDPOINT && t.tag != T_NEWLINE) {
+                    report_error(E_EXPECTED_END);
+                    // Skip every token after this one
+                    skip_line(&t);
+                }
                 continue;
             // Labels
             // e.g.: $ Foo
@@ -287,7 +303,7 @@ int main(int argc, char const *argv[]) {
                 t = parse_token();
                 // If it doesn't end there, throw error
                 if(t.tag != T_ENDPOINT && t.tag != T_NEWLINE) {
-                    report_error(E_UNEXPECTED_LABEL_TOKEN);
+                    report_error(E_EXPECTED_END);
                     // Skip every token after this one
                     skip_line(&t);
                 }
