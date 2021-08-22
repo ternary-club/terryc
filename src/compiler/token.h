@@ -99,7 +99,7 @@ COORDINATE first;
 COORDINATE last;
 
 // Empty default token
-#define NEW_TOKEN (TOKEN){T_NOTOKEN, first, last };
+#define NEW_TOKEN (TOKEN){ T_NOTOKEN, first, last };
 
 // Push token into stack
 void push(TOKEN t) {

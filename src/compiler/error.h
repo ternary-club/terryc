@@ -31,13 +31,18 @@ typedef enum {
     E_UNKNOWN_TOKEN,
 } ERROR;
 
+// Source filename
+const char *filename = NULL;
+
 // Report an error
 void report_error(ERROR err) {
     puts("\x1b[1m");
+    puts(filename);
+    puts(":");
     puts(itoa(first.line + 1));
     puts(":");
     puts(itoa(first.column + 1));
-    puts(":\t");
+    puts(": ");
     puts("\x1b[31merror:\x1b[0m ");
     switch (err) {
     case E_VARDEC_INSIDE_LABEL:

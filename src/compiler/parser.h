@@ -95,9 +95,19 @@ bool is_empty() {
     return *end == ' ' || *end == '\t';
 }
 
-// Check if a character is CR/LF
+// Check if a character is CR
+bool is_carriage() {
+    return *end == '\r';
+}
+
+// Check if a character is LF
 bool is_newline() {
-    return *end == '\n' || *end == '\r';
+    return *end == '\n';
+}
+
+// Check if a character is CR/LF
+bool is_line_end() {
+    return is_newline() || is_carriage();
 }
 
 // Check if a character is a balanced ternary number
@@ -136,7 +146,7 @@ bool is_operator() {
 
 // Check if a character is a separator
 bool is_separator() {
-    return is_newline() || is_empty() || is_etx();
+    return is_line_end() || is_empty() || is_etx();
 }
 
 // Compare string with interval string
@@ -155,11 +165,11 @@ void strcpy_i(char *a) {
 
 // Next char
 void next() {
-    // Jump to next character
-    end++;
     // If its a newline character, then jump to the next line
     if(is_newline()) next_line();
-    else next_column();
+    else if(!is_carriage()) next_column();
+    // Jump to next character
+    end++;
     // If it has reached the end of buffer, load next chars
     if(end >= mBuffer + 2 * MAIN_BUFFER_SIZE) {
         for (uint8_t i = 0; i < MAIN_BUFFER_SIZE; i++)
@@ -173,14 +183,23 @@ void next() {
 // Detect token
 TOKEN parse_token() {
     TOKEN t = NEW_TOKEN;
+    
+    // puts("-----------\n");
+    // puts("column = ");
+    // puts(itoa(last.column + 1));
+    // puts("\n");
+    // puts("line = ");
+    // puts(itoa(last.line + 1));
+    // puts("\n");
+
     begin();
 
     // Try to parse a comment
-    if(is_comment()) do next(); while(!is_newline() && !is_etx());
+    if(is_comment()) do next(); while(!is_line_end() && !is_etx());
     
     // Try to parse a newline
-    if(is_newline()) {
-        do next(); while(is_newline());
+    if(is_line_end()) {
+        do next(); while(is_line_end());
         t.tag = T_NEWLINE;
         return t;
     }

@@ -150,9 +150,13 @@ bool parse_equation(TOKEN *t) {
     }
 }
 
-int main(int argc, char const *argv[]) {
+int main(int argc, const char *argv[]) {
+    // Open file
     file = open(argv[1]);
     if(file <= 0) return 1;
+
+    // Set file path for error handling
+    filename = argv[1];
 
     // Read buffer
     read(file, mBuffer, MAIN_BUFFER_SIZE);
