@@ -7,6 +7,7 @@
 typedef enum {
     E_VARDEC_INSIDE_LABEL,
     E_COMMAND_OUTSIDE_LABEL,
+    E_ASSERTION_OUTSIDE_LABEL,
     E_INVALID_NAME,
     E_EXPECTED_NAME_VARDEC,
     E_UNKNOWN_BASE_LITERAL,
@@ -27,6 +28,7 @@ typedef enum {
     E_UNEXPECTED_OPERATOR,
     E_UNSPACED_OPERATOR,
     E_UNKNOWN_OPERATOR,
+    E_LOGICAL_MONADIC_ASSERTION_OPERATOR,
     E_EXPECTED_OPERAND,
     E_UNKNOWN_TOKEN,
 } ERROR;
@@ -50,6 +52,9 @@ void report_error(ERROR err) {
         break;
     case E_COMMAND_OUTSIDE_LABEL:
         puts("command outside label");
+        break;
+    case E_ASSERTION_OUTSIDE_LABEL:
+        puts("assertion outside label");
         break;
     case E_INVALID_NAME:
         puts("invalid variable name");
@@ -113,6 +118,9 @@ void report_error(ERROR err) {
         break;
     case E_UNKNOWN_OPERATOR:
         puts("unknown operator");
+        break;
+    case E_LOGICAL_MONADIC_ASSERTION_OPERATOR:
+        puts("assertion operator cannot be monadic or logical");
         break;
     case E_UNKNOWN_TOKEN:
         puts("unknown token");

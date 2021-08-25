@@ -70,8 +70,6 @@ typedef enum {
 
 // Commands enum
 typedef enum {
-    C_STORE,
-    C_LOAD,
     C_CALL,
     C_GOTO,
 } COMMAND;

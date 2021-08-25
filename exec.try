@@ -1,20 +1,21 @@
-tryte  sugar  0h5F9
-word   milk   0t210
-triple egg    4
-const  flour  0bN10N1
+tryte  sugar    = 0h5F9
+word   milk     = 0t210
+triple egg      = 4
+const  flour    = 0bN10N1
 
 Beginning
     milk ~|= flour
-    egg = flour * ~sugar
-    store 0hAQG milk
+    egg = flour * ~ sugar
+    [0hAQG] = milk
 Start
     goto egg ? flour
         <  Increase
         == End
+        :  Next
 # This is an important section.
 Decrease
     1a = sugar
-    1b = milk 
+    1b = milk | [0hF12]
     call 3
     egg -/= 1a
     goto Start

@@ -51,8 +51,6 @@ void fetch(TOKEN *t) {
 // are any exceeding tokens. Tolerates "offset" exceeding tokens
 // before throwing an error
 void forward(TOKEN *t, uint8_t offset) {
-    // Check if instruction ends here
-    if(t->tag == T_ENDPOINT || t->tag == T_NEWLINE) return;
     // The amount of fetched tokens
     uint8_t tokenCount = 0;
     // Until it's a new line or an end point
@@ -66,6 +64,12 @@ void forward(TOKEN *t, uint8_t offset) {
     push(*t);
 }
 
+typedef enum {
+    EC_STATIC   = 0,      // Equation supports static values (always true)
+    EC_DYNAMIC  = 1 << 0, // Equation supports dynamic values
+    EC_LABEL    = 1 << 1, // Equation supports labels
+} EQUATION_COMPONENT;
+
 // This function was isolated from the main parsing switch because many
 // structures accept equations and too many switch cases being executed
 // in a pipeline changes the code architecture in an unnatural way.
@@ -77,11 +81,13 @@ void forward(TOKEN *t, uint8_t offset) {
 // case C:
 //  if(C) foo();
 // break;
-bool parse_equation(TOKEN *t) {
+bool parse_equation(TOKEN *t, uint8_t mode) {
     // Dummy variable
     TOKEN tName;
     // If the equation didn't find strange tokens until the end
     bool succeeded = true;
+    // If error was already threw in previous cases
+    bool threwError = false;
     // Parse equation
     while(1) {
         // Parse monadic and multidic
@@ -110,16 +116,36 @@ bool parse_equation(TOKEN *t) {
                 // Fetch successor
                 fetch(t);
                 break;
+            case T_REGISTER:
+                // Accept or reject token based on mode
+                if(mode & EC_DYNAMIC) {
+                    // Push register
+                    push(*t);
+                    // Fetch successor
+                    fetch(t);
+                    break;
+                }
+                report_error(E_READ_REGISTER);
+                threwError = true;
+            case T_LABEL:
+                // Accept or reject token based on mode
+                if(mode & EC_LABEL) {
+                    // Push register
+                    push(*t);
+                    // Fetch successor
+                    fetch(t);
+                    break;
+                }
+                report_error(E_READ_LABEL);
+                threwError = true;
             // If it's something else, skip
             default:
                 // Try to fix it by pushing a dummy variable
                 tName = NEW_TOKEN;
                 tName.tag = T_NAME;
                 push(tName);
-                // Exception if register or label was used on expression
-                if(t->tag == T_REGISTER || t->tag == T_LABEL)
-                    report_error(t->tag == T_REGISTER ? E_READ_REGISTER : E_READ_LABEL);
-                else {
+                // Exception if token is unknown and not just rejected
+                if(!threwError) {
                     // The parsing did find strange tokens
                     succeeded = false;
                     report_error(E_EXPECTED_OPERAND);
@@ -132,21 +158,13 @@ bool parse_equation(TOKEN *t) {
         }
 
         // Check if there's a diadic or multidic operator to connect expressions
-        switch(t->tag) {
-            case T_MULTIDIC:
-            case T_DIADIC:
-                // Push operator
-                push(*t);
-                // Fetch successor
-                fetch(t);
-                continue;
-            case T_ENDPOINT:
-            case T_NEWLINE:
-                // Push end
-                push(*t);
-            default:
-                return succeeded;
-        }
+        if(t->tag == T_DIADIC || t->tag == T_MULTIDIC) {
+            // Push operator
+            push(*t);
+            // Fetch successor
+            fetch(t);
+            continue;
+        } else return succeeded;
     }
 }
 
@@ -170,6 +188,7 @@ int main(int argc, const char *argv[]) {
     bool succeeded;
     uint8_t paramCount;
     while(1) {
+        // If it hits the end, breaks
         if(t.tag == T_ENDPOINT) break;
         
         // Fetch successor
@@ -205,6 +224,8 @@ int main(int argc, const char *argv[]) {
                 // If it's just a loose assertion, it's probably an invalid
                 // variable assertion, so throw error
                 report_error(E_UNTARGETED_ASSERTION);
+                // Check if it's outside a label
+                if(!isInsideLabel) report_error(E_ASSERTION_OUTSIDE_LABEL);
                 // And try to fix it by pushing a dummy variable name
                 // e.g.: $ foo =
                 TOKEN tName = NEW_TOKEN;
@@ -217,7 +238,7 @@ int main(int argc, const char *argv[]) {
                 fetch(&t);
                 // Parse equation
                 // e.g.: $ foo = 2 + 5
-                succeeded = parse_equation(&t);
+                succeeded = parse_equation(&t, EC_STATIC | EC_DYNAMIC);
                 // Skip every token after this one
                 forward(&t, (uint8_t)!succeeded);
                 continue;
@@ -231,67 +252,13 @@ int main(int argc, const char *argv[]) {
                 // Check if it's inside a label
                 if(!isInsideLabel) report_error(E_COMMAND_OUTSIDE_LABEL);
                 switch(*((uint8_t*)t.content)) {
-                    // e.g.: $ store
-                    case C_STORE:
-                        // Fetch successor
-                        fetch(&t);
-                        // Parse first argument (value) and count legitimate parameter
-                        // e.g.: $ store 8
-                        if(parse_equation(&t)) paramCount++;
-                        // Parse second argument (register)
-                        // e.g.: $ store 8 1a
-                        if(t.tag == T_REGISTER) {
-                            // Push register
-                            push(t);
-                            // Fetch successor
-                            fetch(&t);
-                            // Count legitimate parameter
-                            paramCount++;
-                        } else {
-                            // Throw error
-                            report_error(E_EXPECTED_REGISTER);
-                            // Try to fix it by pushing an assertion
-                            TOKEN tRegister = NEW_TOKEN;
-                            tRegister.tag = T_REGISTER;
-                            push(tRegister);
-                        }
-                        // Skip every token after this one
-                        forward(&t, 2 - paramCount);
-                        break;
-                    // e.g.: $ load
-                    case C_LOAD:
-                        // Fetch successor
-                        fetch(&t);
-                        // Parse first argument (register)
-                        // e.g.: $ load 3b
-                        if(t.tag == T_REGISTER) {
-                            // Push register
-                            push(t);
-                            // Fetch successor
-                            fetch(&t);
-                            // Count legitimate parameter
-                            paramCount++;
-                        } else {
-                            // Throw error
-                            report_error(E_EXPECTED_REGISTER);
-                            // Try to fix it by pushing an assertion
-                            TOKEN tRegister = NEW_TOKEN;
-                            tRegister.tag = T_REGISTER;
-                            push(tRegister);
-                        }
-                        // Parse second argument (value) and count legitimate parameter
-                        // e.g.: $ load 3b foo
-                        if(parse_equation(&t)) paramCount++;
-                        // Skip every token after this one
-                        forward(&t, 2 - paramCount);
-                        break;
                     // e.g.: $ call
                     case C_CALL:
                         // Fetch successor
                         fetch(&t);
                         // Parse argument (value) and count legitimate parameter
                         // e.g.: $ call 1
-                        if(parse_equation(&t)) paramCount++;
+                        if(parse_equation(&t, EC_STATIC | EC_DYNAMIC)) paramCount++;
                         // Skip every token after this one
                         forward(&t, 1 - paramCount);
                         break;
@@ -363,7 +330,7 @@ int main(int argc, const char *argv[]) {
                 }
 
                 // Parse equation
-                succeeded = parse_equation(&t);
+                succeeded = parse_equation(&t, EC_STATIC);
                 // Skip every token after this one
                 forward(&t, (uint8_t)!succeeded);
                 continue;
@@ -372,6 +339,9 @@ int main(int argc, const char *argv[]) {
             // e.g.: $ foo
             case T_REGISTER:
             case T_NAME:
+                // Check if it's outside a label
+                if(!isInsideLabel) report_error(E_ASSERTION_OUTSIDE_LABEL);
+                
                 // Push assignable entity
                 push(t);
                 // Fetch successor
@@ -395,7 +365,7 @@ int main(int argc, const char *argv[]) {
                 }
 
                 // Parse equation
-                succeeded = parse_equation(&t);
+                succeeded = parse_equation(&t, EC_STATIC | EC_DYNAMIC);
                 // Skip every token after this one
                 forward(&t, (uint8_t)!succeeded);
                 continue;

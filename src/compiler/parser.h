@@ -182,16 +182,10 @@ void next() {
 
 // Detect token
 TOKEN parse_token() {
+    // Current token
     TOKEN t = NEW_TOKEN;
-    
-    // puts("-----------\n");
-    // puts("column = ");
-    // puts(itoa(last.column + 1));
-    // puts("\n");
-    // puts("line = ");
-    // puts(itoa(last.line + 1));
-    // puts("\n");
 
+    // Save cursor's checkpoint
     begin();
 
     // Try to parse a comment
@@ -318,12 +312,15 @@ TOKEN parse_token() {
         next();
         if(!is_operator()) {
             t.tag = T_ASSERTION;
+            // Represents no operator
+            *((uint8_t*)t.content) = 0;
             return t;
         } else isLogical = true;
     }
 
     // Try to parse an operator
     if(is_operator()) {
+        // If the operator is diadic and tritwise (both necessary for it to be logical)
         bool isDiadicTritwise = false;
 
         // Read operator characters
@@ -334,6 +331,7 @@ TOKEN parse_token() {
             *((uint8_t*)t.content) = M_SUBTRACTION;
             t.tag = T_MULTIDIC;
         }
+
         // Monadic operators
         else if(strcmp_i("~")) {
             *((uint8_t*)t.content) = M_NEGATION;
@@ -360,6 +358,7 @@ TOKEN parse_token() {
             *((uint8_t*)t.content) = M_CLAMPDOWN;
             t.tag = T_MONADIC;
         }
+
         // Diadic operators
         else if(strcmp_i("+")) {
             *((uint8_t*)t.content) = D_ADDITION;
@@ -408,22 +407,36 @@ TOKEN parse_token() {
             *((uint8_t*)t.content) = D_NAND;
             t.tag = T_DIADIC;
             isDiadicTritwise = true;
-        } else {
-            // Isn't known operator
+        }
+        
+        // Unknown
+        else {
+            // Throw error
             report_error(E_UNKNOWN_OPERATOR);
             // Invalid operators are treated as multidic so they don't cause
             // additional inter token problems
             t.tag = T_MULTIDIC;
         }
         
-        // If it's a logical operator, replace the tag
-        if(isLogical) {
-            // If it's not a diadic tritwise operator, throw error
-            if(!isDiadicTritwise) report_error(E_LOGICAL_NON_DIADIC_TRITWISE);
-            t.tag = T_LOGICAL;
+        // If the final token is an assertion, it means it's an assertion operator
+        if(is_assertion()) {
+            // Throw error
+            if(t.tag != T_DIADIC || isLogical) report_error(E_LOGICAL_MONADIC_ASSERTION_OPERATOR);
+            t.tag = T_ASSERTION;
+            // Advance
+            next();
         }
-        // Check if operators are separated
-        if(!is_separator()) report_error(E_UNSPACED_OPERATOR);
+        // If it's a logical operator, replace the tag
+        else {
+            if(isLogical) {
+                // If it's not a diadic tritwise operator, throw error
+                if(!isDiadicTritwise) report_error(E_LOGICAL_NON_DIADIC_TRITWISE);
+                t.tag = T_LOGICAL;
+            }
+            // Check if operators are separated
+            if(!is_separator()) report_error(E_UNSPACED_OPERATOR);
+        }
+
         return t;
     }
 
@@ -473,8 +486,6 @@ TOKEN parse_token() {
         if(!is_separator()) isCommand = false;
 
         // Try to compare commands
-        else if(strcmp_i("store"))  *((uint8_t*)t.content) = C_STORE;
-        else if(strcmp_i("load"))   *((uint8_t*)t.content) = C_LOAD;
         else if(strcmp_i("call"))   *((uint8_t*)t.content) = C_CALL;
         else if(strcmp_i("goto"))   *((uint8_t*)t.content) = C_GOTO;
         else isCommand = false;
