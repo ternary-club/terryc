@@ -15,7 +15,7 @@ typedef enum {
     E_EMPTY_BASE_LITERAL,
     E_UNEXPECTED_NUMBER,
     E_INVALID_NUMBER,
-    E_LOGICAL_NON_DIADIC_TRITWISE,
+    E_UNEXPECTED_QUATERNARY_OPERATOR,
     E_EXPECTED_LABEL,
     E_READ_LABEL,
     E_INVALID_LABEL,
@@ -29,6 +29,7 @@ typedef enum {
     E_UNEXPECTED_OPERATOR,
     E_UNSPACED_OPERATOR,
     E_UNKNOWN_OPERATOR,
+    E_LOGICAL_NON_DIADIC_TRITWISE,
     E_LOGICAL_MONADIC_ASSERTION_OPERATOR,
     E_EXPECTED_OPERAND,
     E_UNKNOWN_TOKEN,
@@ -78,8 +79,10 @@ void report_error(ERROR err) {
         case E_INVALID_NUMBER:
             puts("invalid algarism in number");
             break;
-        case E_LOGICAL_NON_DIADIC_TRITWISE:
-            puts("cannot use logic modifier on non-diadic tritwise operator");
+        case E_UNEXPECTED_QUATERNARY_OPERATOR:
+            puts(
+                "cannot use a quaternary operator after a non-logical "
+                "operation");
             break;
         case E_READ_LABEL:
             puts("cannot use label as value");
@@ -122,6 +125,9 @@ void report_error(ERROR err) {
             break;
         case E_UNKNOWN_OPERATOR:
             puts("unknown operator");
+            break;
+        case E_LOGICAL_NON_DIADIC_TRITWISE:
+            puts("cannot use logic modifier on non-diadic tritwise operator");
             break;
         case E_LOGICAL_MONADIC_ASSERTION_OPERATOR:
             puts("assertion operator cannot be monadic or logical");

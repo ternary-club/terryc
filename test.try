@@ -1,8 +1,8 @@
 tryte a = ~ 0hEAEMENKKK + 2
 word b = 0t1021012 / \/ 2
+
 Label
-    b = ~ c % d /% c ^ a | \/ - b - a
+    b = c % d /% c ^ a | \/ - b =+ a
     1a = 5
     call 1
     goto Label
-Continue

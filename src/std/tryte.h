@@ -47,32 +47,32 @@
 // 1 heptavintimal character = 3 trits
 #define HEPTA_VINTIMAL_TRIT (HEPTA_VINTIMAL / TRYTE_TRIT)
 
-// Max value of a tryte = 3^9 - 1 = 19682
+// Max value of a tryte = 3^9 - 1 = 19,682
 #define TRYTE_MAX 19682L
 
-// Max value of a balanced tryte = 3^9 / 2 = 9841
-#define BTRYTE_MAX 9841L
+// Max value of a balanced tryte = 3^9 / 2 - 1 = 9,840
+#define BTRYTE_MAX 9840L
 
-// Min value of a balanced tryte = 3^9 / 2 * -1 = -9841
+// Min value of a balanced tryte = 3^9 / 2 * -1 = -9,841
 #define BTRYTE_MIN -9841L
 
-// Max value of a tryte = 3^9 - 1 = 19682
-#define WORD_MAX 7625597484987ll
+// Max value of a tryte = 3^9 - 1 = 19,682
+#define WORD_MAX 7625597484987LL
 
 // Amount of bytes for storing 3^81 - 1 =
-// 443426488243037769948249630619149892802 (136/8 = 17 bytes)
+// 443,426,488,243,037,769,948,249,630,619,149,892,802 (136/8 = 17 bytes)
 #define TRIPLE_BYTES 17U
 
-// 1 Kitri (Kt) = 3^7 = 2187
+// 1 Kitri (Kt) = 3^7 = 2,187
 #define KITRI 2187U
 
-// 1 Metri (Mt) = 3^7^2 = 2187^2 = 4782969
+// 1 Metri (Mt) = 3^7^2 = 2,187^2 = 4782,969
 #define METRI 4782969U
 
-// 1 Gitri (Gt) = 3^7^3 = 2187^3 = 10460353203
+// 1 Gitri (Gt) = 3^7^3 = 2,187^3 = 10,460,353,203
 #define GITRI 10460353203ULL
 
-// 1 Tetri (Tt) = 3^7^4 = 2187^4 = 22876792454961
+// 1 Tetri (Tt) = 3^7^4 = 2,187^4 = 22,876,792,454,961
 #define TETRI 22876792454961ULL
 
 // Triple Word macro declaration

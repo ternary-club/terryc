@@ -81,35 +81,41 @@ typedef enum {
 //  if(C) foo();
 // break;
 bool parse_equation(TOKEN *t, uint8_t mode) {
-    // Dummy variable
+    // Dummy variable used for error correction
     TOKEN tName;
+    // If the last equation was logical and it can handle a
+    // quaternary operator
+    bool afterLogicalOperation = false;
     // If the equation didn't find strange tokens until the end
     bool succeeded = true;
     // If error was already threw in previous cases
     bool threwError = false;
+
     // Parse equation
     while (1) {
         // Parse monadic and multidic
-        if (t->tag == T_MONADIC || t->tag == T_MULTIDIC) {
-            // Push current operator
+        while (t->tag == T_MONADIC || t->tag == T_MULTIDIC) {
+            // Disallow quaternary operator (must be immediately
+            // after a logical operation)
+            afterLogicalOperation = false;
+            // Push operator
             push(*t);
             fetch(t);
-            // Advance operators
-            while (t->tag == T_MONADIC || t->tag == T_MULTIDIC) {
-                // Push operator
-                push(*t);
-                next();
-                fetch_only(t);
-            }
         }
 
         // Parse number or variable (or other)
         switch (t->tag) {
+            case T_QUATERNARY:
+                if (!afterLogicalOperation)
+                    report_error(E_UNEXPECTED_QUATERNARY_OPERATOR);
             case T_INT10:
             case T_INT27:
             case T_INT3:
             case T_INTB3:
             case T_NAME:
+                // Disallow quaternary operator (must be immediately
+                // after a logical operation)
+                afterLogicalOperation = false;
                 // Push value
                 push(*t);
                 // Fetch successor
@@ -158,8 +164,11 @@ bool parse_equation(TOKEN *t, uint8_t mode) {
                     fetch(t);
         }
 
-        // Check if there's a diadic or multidic operator to connect expressions
-        if (t->tag == T_DIADIC || t->tag == T_MULTIDIC) {
+        // Check if there's a diadic, multidic or logical operator
+        // to connect expressions
+        if (t->tag == T_DIADIC || t->tag == T_MULTIDIC || t->tag == T_LOGICAL) {
+            // Record logical operation
+            afterLogicalOperation = t->tag == T_LOGICAL;
             // Push operator
             push(*t);
             // Fetch successor

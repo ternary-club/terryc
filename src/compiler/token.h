@@ -10,23 +10,32 @@
 
 // Tags enum
 typedef enum {
+    // Nil tokens
     T_NOTOKEN,
     T_NEWLINE,
+    T_ENDPOINT,
+    // Arithmetic operators
     T_MONADIC,
     T_DIADIC,
     T_MULTIDIC,
+    // Logical operators
     T_LOGICAL,
+    T_QUATERNARY,
+    T_OUTCOME,
+    // User
     T_LABEL,
+    T_NAME,
+    // Values
     T_INTB3,
     T_INT3,
     T_INT10,
     T_INT27,
+    // Keywords
     T_VARSIZE,
-    T_NAME,
     T_REGISTER,
+    // Actions
     T_ASSERTION,
     T_COMMAND,
-    T_ENDPOINT
 } TAG;
 
 // Labels enum

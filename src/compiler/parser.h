@@ -106,8 +106,8 @@ bool is_operator() {
 bool is_separator() { return is_line_end() || is_empty() || is_etx(); }
 
 // Compare string with interval string
-bool strcmp_i(const char *a) {
-    char *b = start;
+bool strcmp_i(const char *a, uint8_t offset) {
+    char *b = start + offset;
     while (*a || b < end)
         if (*a++ != *b++) return false;
     return true;
@@ -309,96 +309,101 @@ TOKEN parse_token() {
         do next();
         while (is_operator());
 
+        // String comparisons below use isLogical as offset because if it's true
+        // (1), the initial assertion is skipped (even if the operator doesn't
+        // support logical assertions like monadic operators, it still should
+        // not be treated as an unknown operator).
+
         // Multidic operator
-        if (strcmp_i("-")) {
+        if (strcmp_i("-", isLogical)) {
             *((uint8_t *)t.content) = M_SUBTRACTION;
             t.tag = T_MULTIDIC;
         }
 
         // Monadic operators
-        else if (strcmp_i("~")) {
+        else if (strcmp_i("~", isLogical)) {
             *((uint8_t *)t.content) = M_NEGATION;
             t.tag = T_MONADIC;
-        } else if (strcmp_i("+/")) {
+        } else if (strcmp_i("+/", isLogical)) {
             *((uint8_t *)t.content) = M_INCREMENT;
             t.tag = T_MONADIC;
-        } else if (strcmp_i("-/")) {
+        } else if (strcmp_i("-/", isLogical)) {
             *((uint8_t *)t.content) = M_DECREMENT;
             t.tag = T_MONADIC;
-        } else if (strcmp_i("%|")) {
+        } else if (strcmp_i("%|", isLogical)) {
             *((uint8_t *)t.content) = M_ISTRUE;
             t.tag = T_MONADIC;
-        } else if (strcmp_i("%/")) {
+        } else if (strcmp_i("%/", isLogical)) {
             *((uint8_t *)t.content) = M_ISUNKNOWN;
             t.tag = T_MONADIC;
-        } else if (strcmp_i("%-")) {
+        } else if (strcmp_i("%-", isLogical)) {
             *((uint8_t *)t.content) = M_ISFALSE;
             t.tag = T_MONADIC;
-        } else if (strcmp_i("/\\")) {
+        } else if (strcmp_i("/\\", isLogical)) {
             *((uint8_t *)t.content) = M_CLAMPUP;
             t.tag = T_MONADIC;
-        } else if (strcmp_i("\\/")) {
+        } else if (strcmp_i("\\/", isLogical)) {
             *((uint8_t *)t.content) = M_CLAMPDOWN;
             t.tag = T_MONADIC;
         }
 
         // Diadic operators
-        else if (strcmp_i("+")) {
+        else if (strcmp_i("+", isLogical)) {
             *((uint8_t *)t.content) = D_ADDITION;
             t.tag = T_DIADIC;
-        } else if (strcmp_i("-")) {
+        } else if (strcmp_i("-", isLogical)) {
             *((uint8_t *)t.content) = D_SUBTRACTION;
             t.tag = T_DIADIC;
-        } else if (strcmp_i("*")) {
+        } else if (strcmp_i("*", isLogical)) {
             *((uint8_t *)t.content) = D_MULTIPLICATION;
             t.tag = T_DIADIC;
-        } else if (strcmp_i("/")) {
+        } else if (strcmp_i("/", isLogical)) {
             *((uint8_t *)t.content) = D_DIVISION;
             t.tag = T_DIADIC;
-        } else if (strcmp_i("%")) {
+        } else if (strcmp_i("%", isLogical)) {
             *((uint8_t *)t.content) = D_MODULO;
             t.tag = T_DIADIC;
-        } else if (strcmp_i("|")) {
+        } else if (strcmp_i("|", isLogical)) {
             *((uint8_t *)t.content) = D_OR;
             t.tag = T_DIADIC;
             isDiadicTritwise = true;
-        } else if (strcmp_i("&")) {
+        } else if (strcmp_i("&", isLogical)) {
             *((uint8_t *)t.content) = D_AND;
             t.tag = T_DIADIC;
             isDiadicTritwise = true;
-        } else if (strcmp_i("^")) {
+        } else if (strcmp_i("^", isLogical)) {
             *((uint8_t *)t.content) = D_XOR;
             t.tag = T_DIADIC;
             isDiadicTritwise = true;
-        } else if (strcmp_i("**")) {
+        } else if (strcmp_i("**", isLogical)) {
             *((uint8_t *)t.content) = D_ANY;
             t.tag = T_DIADIC;
             isDiadicTritwise = true;
-        } else if (strcmp_i("/%")) {
+        } else if (strcmp_i("/%", isLogical)) {
             *((uint8_t *)t.content) = D_CONSENSUS;
             t.tag = T_DIADIC;
             isDiadicTritwise = true;
-        } else if (strcmp_i("/+")) {
+        } else if (strcmp_i("/+", isLogical)) {
             *((uint8_t *)t.content) = D_SUM;
             t.tag = T_DIADIC;
             isDiadicTritwise = true;
-        } else if (strcmp_i("~|")) {
+        } else if (strcmp_i("~|", isLogical)) {
             *((uint8_t *)t.content) = D_NOR;
             t.tag = T_DIADIC;
             isDiadicTritwise = true;
-        } else if (strcmp_i("~&")) {
+        } else if (strcmp_i("~&", isLogical)) {
             *((uint8_t *)t.content) = D_NAND;
             t.tag = T_DIADIC;
             isDiadicTritwise = true;
         }
-
         // Unknown
         else {
             // Throw error
             report_error(E_UNKNOWN_OPERATOR);
-            // Invalid operators are treated as multidic so they don't cause
-            // additional inter token problems
+            // Invalid operators are treated as multidic and diadic tritwise
+            // so they don't cause additional inter token problems
             t.tag = T_MULTIDIC;
+            isDiadicTritwise = true;
         }
 
         // If the final token is an assertion, it means it's an assertion
@@ -407,6 +412,7 @@ TOKEN parse_token() {
             // Throw error
             if (t.tag != T_DIADIC || isLogical)
                 report_error(E_LOGICAL_MONADIC_ASSERTION_OPERATOR);
+
             t.tag = T_ASSERTION;
             // Advance
             next();
@@ -439,9 +445,9 @@ TOKEN parse_token() {
         }
 
         // Check if label is reserved
-        if (strcmp_i("Continue"))
+        if (strcmp_i("Continue", 0))
             *((uint8_t *)t.content) = L_CONTINUE;
-        else if (strcmp_i("End"))
+        else if (strcmp_i("End", 0))
             *((uint8_t *)t.content) = L_END;
         else
             *((uint8_t *)t.content) = L_CUSTOM;
@@ -461,13 +467,13 @@ TOKEN parse_token() {
         if (!is_separator()) isVarSize = false;
 
         // Try to compare variable sizes
-        else if (strcmp_i("const"))
+        else if (strcmp_i("const", 0))
             *((uint8_t *)t.content) = VS_CONST;
-        else if (strcmp_i("tryte"))
+        else if (strcmp_i("tryte", 0))
             *((uint8_t *)t.content) = VS_TRYTE;
-        else if (strcmp_i("word"))
+        else if (strcmp_i("word", 0))
             *((uint8_t *)t.content) = VS_WORD;
-        else if (strcmp_i("triple"))
+        else if (strcmp_i("triple", 0))
             *((uint8_t *)t.content) = VS_TRIPLE;
         else
             isVarSize = false;
@@ -491,9 +497,9 @@ TOKEN parse_token() {
         if (!is_separator()) isCommand = false;
 
         // Try to compare commands
-        else if (strcmp_i("call"))
+        else if (strcmp_i("call", 0))
             *((uint8_t *)t.content) = C_CALL;
-        else if (strcmp_i("goto"))
+        else if (strcmp_i("goto", 0))
             *((uint8_t *)t.content) = C_GOTO;
         else
             isCommand = false;
