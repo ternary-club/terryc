@@ -4,7 +4,8 @@
 #endif
 
 // Errors enum
-typedef enum {
+typedef enum
+{
     E_VARDEC_INSIDE_LABEL,
     E_COMMAND_OUTSIDE_LABEL,
     E_ASSERTION_OUTSIDE_LABEL,
@@ -19,6 +20,7 @@ typedef enum {
     E_EXPECTED_LABEL,
     E_READ_LABEL,
     E_INVALID_LABEL,
+    E_INVALID_RESERVED_LABEL,
     E_EXPECTED_END,
     E_READ_REGISTER,
     E_EXPECTED_REGISTER,
@@ -37,7 +39,8 @@ typedef enum {
 const char *filename = NULL;
 
 // Report an error
-void report_error(ERROR err) {
+void report_error(ERROR err)
+{
     puts("\x1b[1m");
     puts(filename);
     puts(":");
@@ -46,7 +49,8 @@ void report_error(ERROR err) {
     puts(itoa(first.column + 1));
     puts(": ");
     puts("\x1b[31merror:\x1b[0m ");
-    switch (err) {
+    switch (err)
+    {
     case E_VARDEC_INSIDE_LABEL:
         puts("variable declaration inside label");
         break;
@@ -88,6 +92,9 @@ void report_error(ERROR err) {
         break;
     case E_INVALID_LABEL:
         puts("invalid label name");
+        break;
+    case E_INVALID_RESERVED_LABEL:
+        puts("cannot declare a reserved label");
         break;
     case E_EXPECTED_END:
         puts("expected end of statement");

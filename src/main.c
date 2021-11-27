@@ -36,13 +36,11 @@
 #define INFINITE 0xFF
 
 // Fetch succeeding token not skipping any characters.
-void fetch_only(TOKEN *t) {
-    *t = parse_token();
-}
+void fetch_only(TOKEN *t) { *t = parse_token(); }
 
 // Skip whitespaces and fetch succeeding token.
 void fetch(TOKEN *t) {
-    while(is_empty()) next();
+    while (is_empty()) next();
     fetch_only(t);
 }
 
@@ -54,9 +52,10 @@ void forward(TOKEN *t, uint8_t offset) {
     // The amount of fetched tokens
     uint8_t tokenCount = 0;
     // Until it's a new line or an end point
-    while(t->tag != T_NEWLINE && t->tag != T_ENDPOINT) {
+    while (t->tag != T_NEWLINE && t->tag != T_ENDPOINT) {
         // Report error on "offset" token
-        if(offset != INFINITE && tokenCount++ == offset) report_error(E_EXPECTED_END);
+        if (offset != INFINITE && tokenCount++ == offset)
+            report_error(E_EXPECTED_END);
         // Fetch successor
         fetch(t);
     }
@@ -65,9 +64,9 @@ void forward(TOKEN *t, uint8_t offset) {
 }
 
 typedef enum {
-    EC_STATIC   = 0,      // Equation supports static values (always true)
-    EC_DYNAMIC  = 1 << 0, // Equation supports dynamic values
-    EC_LABEL    = 1 << 1, // Equation supports labels
+    EC_STATIC = 0,        // Equation supports static values (always true)
+    EC_DYNAMIC = 1 << 0,  // Equation supports dynamic values
+    EC_LABEL = 1 << 1,    // Equation supports labels
 } EQUATION_COMPONENT;
 
 // This function was isolated from the main parsing switch because many
@@ -89,14 +88,14 @@ bool parse_equation(TOKEN *t, uint8_t mode) {
     // If error was already threw in previous cases
     bool threwError = false;
     // Parse equation
-    while(1) {
+    while (1) {
         // Parse monadic and multidic
-        if(t->tag == T_MONADIC || t->tag == T_MULTIDIC) {
+        if (t->tag == T_MONADIC || t->tag == T_MULTIDIC) {
             // Push current operator
             push(*t);
             fetch(t);
             // Advance operators
-            while(t->tag == T_MONADIC || t->tag == T_MULTIDIC) {
+            while (t->tag == T_MONADIC || t->tag == T_MULTIDIC) {
                 // Push operator
                 push(*t);
                 next();
@@ -105,7 +104,7 @@ bool parse_equation(TOKEN *t, uint8_t mode) {
         }
 
         // Parse number or variable (or other)
-        switch(t->tag) {
+        switch (t->tag) {
             case T_INT10:
             case T_INT27:
             case T_INT3:
@@ -118,7 +117,7 @@ bool parse_equation(TOKEN *t, uint8_t mode) {
                 break;
             case T_REGISTER:
                 // Accept or reject token based on mode
-                if(mode & EC_DYNAMIC) {
+                if (mode & EC_DYNAMIC) {
                     // Push register
                     push(*t);
                     // Fetch successor
@@ -129,7 +128,7 @@ bool parse_equation(TOKEN *t, uint8_t mode) {
                 threwError = true;
             case T_LABEL:
                 // Accept or reject token based on mode
-                if(mode & EC_LABEL) {
+                if (mode & EC_LABEL) {
                     // Push register
                     push(*t);
                     // Fetch successor
@@ -138,40 +137,43 @@ bool parse_equation(TOKEN *t, uint8_t mode) {
                 }
                 report_error(E_READ_LABEL);
                 threwError = true;
-            // If it's something else, skip
+                // If it's something else, skip
             default:
                 // Try to fix it by pushing a dummy variable
                 tName = NEW_TOKEN;
                 tName.tag = T_NAME;
                 push(tName);
                 // Exception if token is unknown and not just rejected
-                if(!threwError) {
+                if (!threwError) {
                     // The parsing did find strange tokens
                     succeeded = false;
                     report_error(E_EXPECTED_OPERAND);
                 }
-                // If it's a connector operator, it's probably a missing operand, so don't ignore it.
-                // If it's an ending token, it's probably a bad ending equation, so don't ignore it.
-                // If it's anything else, it's probably a bad operand, so ignore it.
-                if(t->tag != T_DIADIC && t->tag != T_MULTIDIC
-                && t->tag != T_ENDPOINT && t->tag != T_NEWLINE) fetch(t);
+                // If it's a connector operator, it's probably a missing
+                // operand, so don't ignore it. If it's an ending token, it's
+                // probably a bad ending equation, so don't ignore it. If it's
+                // anything else, it's probably a bad operand, so ignore it.
+                if (t->tag != T_DIADIC && t->tag != T_MULTIDIC &&
+                    t->tag != T_ENDPOINT && t->tag != T_NEWLINE)
+                    fetch(t);
         }
 
         // Check if there's a diadic or multidic operator to connect expressions
-        if(t->tag == T_DIADIC || t->tag == T_MULTIDIC) {
+        if (t->tag == T_DIADIC || t->tag == T_MULTIDIC) {
             // Push operator
             push(*t);
             // Fetch successor
             fetch(t);
             continue;
-        } else return succeeded;
+        } else
+            return succeeded;
     }
 }
 
 int main(int argc, const char *argv[]) {
     // Open file
     file = open(argv[1]);
-    if(file <= 0) return 1;
+    if (file <= 0) return 1;
 
     // Set file path for error handling
     filename = argv[1];
@@ -179,7 +181,7 @@ int main(int argc, const char *argv[]) {
     // Read buffer
     read(file, mBuffer, MAIN_BUFFER_SIZE);
     end = mBuffer;
-    
+
     TOKEN t = NEW_TOKEN;
     // General variables
     bool isInsideLabel = false;
@@ -187,17 +189,17 @@ int main(int argc, const char *argv[]) {
     bool hasMonadic;
     bool succeeded;
     uint8_t paramCount;
-    while(1) {
+    while (1) {
         // If it hits the end, breaks
-        if(t.tag == T_ENDPOINT) break;
-        
+        if (t.tag == T_ENDPOINT) break;
+
         // Fetch successor
         fetch(&t);
 
         // Switch tag (always the first tag of instruction)
-        switch(t.tag) {
-            // Loose operators
-            // e.g.: $ +
+        switch (t.tag) {
+                // Loose operators
+                // e.g.: $ +
             case T_MONADIC:
             case T_DIADIC:
             case T_MULTIDIC:
@@ -207,8 +209,8 @@ int main(int argc, const char *argv[]) {
                 // Skip every token after this one
                 forward(&t, INFINITE);
                 continue;
-            // Loose numbers
-            // e.g.: $ 5
+                // Loose numbers
+                // e.g.: $ 5
             case T_INTB3:
             case T_INT3:
             case T_INT10:
@@ -218,14 +220,14 @@ int main(int argc, const char *argv[]) {
                 // Skip every token after this one
                 forward(&t, INFINITE);
                 continue;
-            // Loose assertion
-            // e.g.: $ =
+                // Loose assertion
+                // e.g.: $ =
             case T_ASSERTION:
                 // If it's just a loose assertion, it's probably an invalid
                 // variable assertion, so throw error
                 report_error(E_UNTARGETED_ASSERTION);
                 // Check if it's outside a label
-                if(!isInsideLabel) report_error(E_ASSERTION_OUTSIDE_LABEL);
+                if (!isInsideLabel) report_error(E_ASSERTION_OUTSIDE_LABEL);
                 // And try to fix it by pushing a dummy variable name
                 // e.g.: $ foo =
                 TOKEN tName = NEW_TOKEN;
@@ -242,33 +244,34 @@ int main(int argc, const char *argv[]) {
                 // Skip every token after this one
                 forward(&t, (uint8_t)!succeeded);
                 continue;
-            // Command
-            // e.g.: $ goto
+                // Command
+                // e.g.: $ goto
             case T_COMMAND:
                 // Parameter count for error handling
                 paramCount = 0;
                 // Push command
                 push(t);
                 // Check if it's inside a label
-                if(!isInsideLabel) report_error(E_COMMAND_OUTSIDE_LABEL);
-                switch(*((uint8_t*)t.content)) {
-                    // e.g.: $ call
+                if (!isInsideLabel) report_error(E_COMMAND_OUTSIDE_LABEL);
+                switch (*((uint8_t *)t.content)) {
+                        // e.g.: $ call
                     case C_CALL:
                         // Fetch successor
                         fetch(&t);
                         // Parse argument (value) and count legitimate parameter
                         // e.g.: $ call 1
-                        if(parse_equation(&t, EC_STATIC | EC_DYNAMIC)) paramCount++;
+                        if (parse_equation(&t, EC_STATIC | EC_DYNAMIC))
+                            paramCount++;
                         // Skip every token after this one
                         forward(&t, 1 - paramCount);
                         break;
-                    // e.g.: $ goto
+                        // e.g.: $ goto
                     case C_GOTO:
                         // Fetch successor
                         fetch(&t);
                         // Parse argument (label)
                         // e.g.: $ goto 3b
-                        if(t.tag == T_LABEL) {
+                        if (t.tag == T_LABEL) {
                             // Push label
                             push(t);
                             // Fetch successor
@@ -288,18 +291,18 @@ int main(int argc, const char *argv[]) {
                         break;
                 }
                 continue;
-            // Variable size
-            // e.g.: $ tryte
+                // Variable size
+                // e.g.: $ tryte
             case T_VARSIZE:
                 // Push variable size
                 push(t);
                 // Check if it's inside a label
-                if(isInsideLabel) report_error(E_VARDEC_INSIDE_LABEL);
+                if (isInsideLabel) report_error(E_VARDEC_INSIDE_LABEL);
                 // Fetch successor
                 fetch(&t);
-                // Check if it has a variable name 
+                // Check if it has a variable name
                 // e.g.: $ tryte foo
-                if(t.tag == T_NAME) {
+                if (t.tag == T_NAME) {
                     // Push name
                     push(t);
                     // Fetch successor
@@ -312,10 +315,10 @@ int main(int argc, const char *argv[]) {
                     tName.tag = T_NAME;
                     push(tName);
                 }
-               
+
                 // Check if it has an assertion
                 // e.g.: $ tryte foo =
-                if(t.tag == T_ASSERTION) {
+                if (t.tag == T_ASSERTION) {
                     // Push assertion
                     push(t);
                     // Fetch successor
@@ -334,14 +337,14 @@ int main(int argc, const char *argv[]) {
                 // Skip every token after this one
                 forward(&t, (uint8_t)!succeeded);
                 continue;
-            // Assignable entity
-            // e.g.: $ 1a
-            // e.g.: $ foo
+                // Assignable entity
+                // e.g.: $ 1a
+                // e.g.: $ foo
             case T_REGISTER:
             case T_NAME:
                 // Check if it's outside a label
-                if(!isInsideLabel) report_error(E_ASSERTION_OUTSIDE_LABEL);
-                
+                if (!isInsideLabel) report_error(E_ASSERTION_OUTSIDE_LABEL);
+
                 // Push assignable entity
                 push(t);
                 // Fetch successor
@@ -350,7 +353,7 @@ int main(int argc, const char *argv[]) {
                 // Check if it has an assertion
                 // e.g.: $ 1a =
                 // e.g.: $ foo =
-                if(t.tag == T_ASSERTION) {
+                if (t.tag == T_ASSERTION) {
                     // Push assertion
                     push(t);
                     // Fetch successor
@@ -369,9 +372,12 @@ int main(int argc, const char *argv[]) {
                 // Skip every token after this one
                 forward(&t, (uint8_t)!succeeded);
                 continue;
-            // Labels
-            // e.g.: $ Foo
+                // Labels
+                // e.g.: $ Foo
             case T_LABEL:
+                // Check if it's a reserved label
+                if (*((uint8_t *)t.content) != L_CUSTOM)
+                    report_error(E_INVALID_RESERVED_LABEL);
                 // Mark inside of label
                 isInsideLabel = true;
                 // Push label
@@ -381,9 +387,9 @@ int main(int argc, const char *argv[]) {
                 // Skip every token after this one
                 forward(&t, 0);
                 continue;
-            // New lines
-            // e.g.: $ \n
-            // e.g.: $ \r\n
+                // New lines
+                // e.g.: $ \n
+                // e.g.: $ \r\n
             case T_NEWLINE:
                 // Push new line
                 push(t);
@@ -391,11 +397,11 @@ int main(int argc, const char *argv[]) {
                 do
                     // Fetch successor
                     fetch(&t);
-                while(t.tag == T_NEWLINE);
+                while (t.tag == T_NEWLINE);
                 continue;
-            // End point
-            // e.g.: $ \0
-            // e.g.: $ \x03
+                // End point
+                // e.g.: $ \0
+                // e.g.: $ \x03
             case T_ENDPOINT:
                 // Push end point
                 push(t);
@@ -405,8 +411,8 @@ int main(int argc, const char *argv[]) {
         }
     }
 
-    for(uint64_t i = 0; i < height; i++) {
-        switch(stack[i].tag) {
+    for (uint64_t i = 0; i < height; i++) {
+        switch (stack[i].tag) {
             case T_NOTOKEN:
                 puts("?");
                 break;
@@ -456,7 +462,7 @@ int main(int argc, const char *argv[]) {
                 puts("comm");
                 break;
         }
-        if(stack[i].tag != T_NEWLINE) puts(" ");
+        if (stack[i].tag != T_NEWLINE) puts(" ");
     }
     puts("\n");
 }

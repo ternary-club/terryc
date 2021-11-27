@@ -5,3 +5,4 @@ Label
     1a = 5
     call 1
     goto Label
+Continue

@@ -3,14 +3,14 @@
 #include "../std/int.h"
 #endif
 
-
 #ifndef DRIVER_MEM_H
 #define DRIVER_MEM_H
 #include "../driver/mem.h"
 #endif
 
 // Tags enum
-typedef enum {
+typedef enum
+{
     T_NOTOKEN,
     T_NEWLINE,
     T_MONADIC,
@@ -30,8 +30,17 @@ typedef enum {
     T_ENDPOINT
 } TAG;
 
+// Labels enum
+typedef enum
+{
+    L_CUSTOM,
+    L_CONTINUE,
+    L_END,
+} LABEL;
+
 // Variables enum
-typedef enum {
+typedef enum
+{
     VS_CONST,
     VS_TRYTE,
     VS_WORD,
@@ -39,7 +48,8 @@ typedef enum {
 } SIZE;
 
 // Monadic operators enum
-typedef enum {
+typedef enum
+{
     M_SUBTRACTION,
     M_NEGATION,
     M_INCREMENT,
@@ -52,7 +62,8 @@ typedef enum {
 } MONADIC;
 
 // Diadic operators enum
-typedef enum {
+typedef enum
+{
     D_ADDITION,
     D_SUBTRACTION,
     D_MULTIPLICATION,
@@ -69,23 +80,26 @@ typedef enum {
 } DIADIC;
 
 // Commands enum
-typedef enum {
+typedef enum
+{
     C_CALL,
     C_GOTO,
 } COMMAND;
 
 // Coordinate struct
-typedef struct {
+typedef struct
+{
     uint16_t line;
     uint16_t column;
 } COORDINATE;
 
 // Token struct
-typedef struct {
+typedef struct
+{
     TAG tag;
     COORDINATE start;
     COORDINATE end;
-    char content[27];
+    char content[TRYTE_BYTE * 3]; // 3-tryte sized buffer
 } TOKEN;
 
 // Stack
@@ -97,23 +111,27 @@ COORDINATE first;
 COORDINATE last;
 
 // Empty default token
-#define NEW_TOKEN (TOKEN){ T_NOTOKEN, first, last };
+#define NEW_TOKEN (TOKEN){T_NOTOKEN, first, last};
 
 // Push token into stack
-void push(TOKEN t) {
-    if(!height++) stack = (TOKEN*)heap();
-    *((TOKEN*)alloc(sizeof(TOKEN))) = t;
+void push(TOKEN t)
+{
+    if (!height++)
+        stack = (TOKEN *)heap();
+    *((TOKEN *)alloc(sizeof(TOKEN))) = t;
 }
 
 // Pop token from stack
-TOKEN pop() {
-    TOKEN t = *(TOKEN*)((uint64_t)heap() - sizeof(TOKEN));
+TOKEN pop()
+{
+    TOKEN t = *(TOKEN *)((uint64_t)heap() - sizeof(TOKEN));
     free(sizeof(TOKEN));
     height--;
     return t;
 }
 
 // View top item of stack
-TOKEN peep() {
-   return height ? *(TOKEN*)((uint64_t)heap() - sizeof(TOKEN)) : (TOKEN){T_NOTOKEN};
+TOKEN peep()
+{
+    return height ? *(TOKEN *)((uint64_t)heap() - sizeof(TOKEN)) : (TOKEN){T_NOTOKEN};
 }
