@@ -1,6 +1,6 @@
 build:
 	@echo ==== building =========================
-	gcc -pedantic -s -O2 -Werror \
+	gcc -pedantic -s -O2 \
 	-nostdlib \
 	-fno-asynchronous-unwind-tables \
 	-fdata-sections \

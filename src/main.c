@@ -71,7 +71,7 @@ typedef enum {
 
 // This function was isolated from the main parsing switch because many
 // structures accept equations and too many switch cases being executed
-// in a pipeline changes the code architecture in an unnatural way.
+// in a pipeline change the code architecture in an unnatural way.
 // e.g.:
 // case A:
 //  foo();
@@ -137,7 +137,7 @@ bool parse_equation(TOKEN *t, uint8_t mode) {
                 }
                 report_error(E_READ_LABEL);
                 threwError = true;
-                // If it's something else, skip
+            // If it's something else, skip
             default:
                 // Try to fix it by pushing a dummy variable
                 tName = NEW_TOKEN;
