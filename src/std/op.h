@@ -10,7 +10,7 @@ typedef enum {
     JMPN,
     STORE,
     LOAD,
-    ADD, 
+    ADD,
     SUB,
     MUL,
     DIV,

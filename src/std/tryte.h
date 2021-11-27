@@ -59,7 +59,8 @@
 // Max value of a tryte = 3^9 - 1 = 19682
 #define WORD_MAX 7625597484987ll
 
-// Amount of bytes for storing 3^81 - 1 = 443426488243037769948249630619149892802 (136/8 = 17 bytes)
+// Amount of bytes for storing 3^81 - 1 =
+// 443426488243037769948249630619149892802 (136/8 = 17 bytes)
 #define TRIPLE_BYTES 17U
 
 // 1 Kitri (Kt) = 3^7 = 2187
@@ -93,10 +94,11 @@
 #define __trit_ret uint8_t
 
 // Tryte buffer macro declaration
-#define __tryte_buffer(name, count) static uint8_t name[CEIL(count * TRYTE_TRIT, BYTE_TRIT)]
+#define __tryte_buffer(name, count) \
+    static uint8_t name[CEIL(count * TRYTE_TRIT, BYTE_TRIT)]
 
 // Tryte pointer without name (return type) macro declaration
-#define __tryte_ret uint8_t*
+#define __tryte_ret uint8_t *
 
 // Tryte pointer macro declaration
 #define __tryte_ptr(name) uint8_t *name
@@ -108,17 +110,23 @@
 #define __trit_offset(i) ((BYTE_TRIT - 1 - (i) % BYTE_TRIT) * TRIT_BIT)
 
 // Get array form of filling a tryte
-#define __fill_tryte(t, v0, v1, v2) t[0] = v0; \
-                                    t[1] = v1; \
-                                    t[2] = v2
+#define __fill_tryte(t, v0, v1, v2) \
+    t[0] = v0;                      \
+    t[1] = v1;                      \
+    t[2] = v2
 
 // A 9841 valued balanced tryte definition
-#define __tryteMAX {170U, 170U, 128U}
+#define __tryteMAX \
+    { 170U, 170U, 128U }
 // A 1 valued balanced tryte definition
-#define __tryteONE {85U, 85U, 128U}
+#define __tryteONE \
+    { 85U, 85U, 128U }
 // A 0 valued balanced tryte definition
-#define __tryteZERO {85U, 85U, 64U}
+#define __tryteZERO \
+    { 85U, 85U, 64U }
 // A -9840 valued balanced tryte definition
-#define __tryteMINP1 {0U, 0U, 64U}
+#define __tryteMINP1 \
+    { 0U, 0U, 64U }
 // A -9841 valued balanced tryte definition
-#define __tryteMIN {0U, 0U, 0U}
+#define __tryteMIN \
+    { 0U, 0U, 0U }
