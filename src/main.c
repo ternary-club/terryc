@@ -198,8 +198,8 @@ int main(int argc, const char *argv[]) {
 
         // Switch tag (always the first tag of instruction)
         switch (t.tag) {
-                // Loose operators
-                // e.g.: $ +
+            // Loose operators
+            // e.g.: $ +
             case T_MONADIC:
             case T_DIADIC:
             case T_MULTIDIC:
@@ -209,8 +209,8 @@ int main(int argc, const char *argv[]) {
                 // Skip every token after this one
                 forward(&t, INFINITE);
                 continue;
-                // Loose numbers
-                // e.g.: $ 5
+            // Loose numbers
+            // e.g.: $ 5
             case T_INTB3:
             case T_INT3:
             case T_INT10:
@@ -220,8 +220,8 @@ int main(int argc, const char *argv[]) {
                 // Skip every token after this one
                 forward(&t, INFINITE);
                 continue;
-                // Loose assertion
-                // e.g.: $ =
+            // Loose assertion
+            // e.g.: $ =
             case T_ASSERTION:
                 // If it's just a loose assertion, it's probably an invalid
                 // variable assertion, so throw error
@@ -244,8 +244,8 @@ int main(int argc, const char *argv[]) {
                 // Skip every token after this one
                 forward(&t, (uint8_t)!succeeded);
                 continue;
-                // Command
-                // e.g.: $ goto
+            // Command
+            // e.g.: $ goto
             case T_COMMAND:
                 // Parameter count for error handling
                 paramCount = 0;
@@ -291,8 +291,8 @@ int main(int argc, const char *argv[]) {
                         break;
                 }
                 continue;
-                // Variable size
-                // e.g.: $ tryte
+            // Variable size
+            // e.g.: $ tryte
             case T_VARSIZE:
                 // Push variable size
                 push(t);
@@ -337,9 +337,9 @@ int main(int argc, const char *argv[]) {
                 // Skip every token after this one
                 forward(&t, (uint8_t)!succeeded);
                 continue;
-                // Assignable entity
-                // e.g.: $ 1a
-                // e.g.: $ foo
+            // Assignable entity
+            // e.g.: $ 1a
+            // e.g.: $ foo
             case T_REGISTER:
             case T_NAME:
                 // Check if it's outside a label
@@ -372,8 +372,8 @@ int main(int argc, const char *argv[]) {
                 // Skip every token after this one
                 forward(&t, (uint8_t)!succeeded);
                 continue;
-                // Labels
-                // e.g.: $ Foo
+            // Labels
+            // e.g.: $ Foo
             case T_LABEL:
                 // Check if it's a reserved label
                 if (*((uint8_t *)t.content) != L_CUSTOM)
@@ -387,9 +387,9 @@ int main(int argc, const char *argv[]) {
                 // Skip every token after this one
                 forward(&t, 0);
                 continue;
-                // New lines
-                // e.g.: $ \n
-                // e.g.: $ \r\n
+            // New lines
+            // e.g.: $ \n
+            // e.g.: $ \r\n
             case T_NEWLINE:
                 // Push new line
                 push(t);
