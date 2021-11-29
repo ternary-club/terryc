@@ -89,6 +89,9 @@ bool is_balanced() { return *end == 'N' || *end == '0' || *end == '1'; }
 // Check if a character is a ternary number
 bool is_ternary() { return *end >= '0' && *end <= '2'; }
 
+// Check if a character is a quaternary operator
+bool is_quaternary() { return *end == '?'; }
+
 // Check if a character is zero
 bool is_zero() { return *end == '0'; }
 
@@ -100,6 +103,11 @@ bool is_operator() {
     return *end == '+' || *end == '-' || *end == '*' || *end == '/' ||
            *end == '%' || *end == '~' || *end == '&' || *end == '|' ||
            *end == '^' || *end == '\\';
+}
+
+// Check if a character is part of an outcome (excludes =)
+bool is_outcome() {
+    return *end == '>' || *end == '<' || *end == ':' || *end == '!';
 }
 
 // Check if a character is a separator
@@ -158,10 +166,16 @@ TOKEN parse_token() {
         t.tag = T_NEWLINE;
         return t;
     }
-
     // Try to parse the end of text
     if (is_etx()) {
         t.tag = T_ENDPOINT;
+        return t;
+    }
+
+    // Try to parse quaternary operator
+    if (is_quaternary()) {
+        next();
+        t.tag = T_QUATERNARY;
         return t;
     }
 
@@ -284,6 +298,55 @@ TOKEN parse_token() {
         }
         t.tag = T_INT10;
         return t;
+    }
+
+    // Try to parse an outcome
+    if (is_assertion() || is_outcome()) {
+        // If it has outcome-exclusive characters or if it's
+        // just assertions
+        bool hasOutcomeChar = is_outcome();
+
+        // Read outcome characters
+        do {
+            next();
+            // Check if it already found an outcome character
+            if (!hasOutcomeChar) hasOutcomeChar = is_outcome();
+        } while (is_assertion() || is_outcome());
+
+        // Filter comparisons (not exactly necessary here, but
+        // this checking would be needed filter errors and it's
+        // more idiomatic and optimized this way)
+        if (!hasOutcomeChar) {
+            if (strcmp_i("==", 0)) {
+                *((uint8_t *)t.content) = O_EQUAL;
+                t.tag = T_OUTCOME;
+                return t;
+            }
+            // If it has no outcome characters, it's likely a
+            // logical operator or something else, so rewind
+            else
+                rewind();
+        } else {
+            t.tag = T_OUTCOME;
+            if (strcmp_i(">", 0))
+                *((uint8_t *)t.content) = O_GREATER;
+            else if (strcmp_i(">=", 0))
+                *((uint8_t *)t.content) = O_GREATER | O_EQUAL;
+            else if (strcmp_i("<", 0))
+                *((uint8_t *)t.content) = O_LESS;
+            else if (strcmp_i("<=", 0))
+                *((uint8_t *)t.content) = O_LESS | O_EQUAL;
+            else if (strcmp_i(":", 0))
+                *((uint8_t *)t.content) = O_ELSE;
+            else if (strcmp_i("!=", 0))
+                *((uint8_t *)t.content) = O_GREATER | O_LESS;
+            // If it has a outcome characters but it isn't any
+            // known outcome, it's likely a mistyped outcome,
+            // so throw error
+            else
+                report_error(E_INVALID_OUTCOME);
+            return t;
+        }
     }
 
     // Try to parse an assertion

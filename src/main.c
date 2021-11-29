@@ -30,18 +30,83 @@
 
 #ifndef COMPILER_ERROR_H
 #define COMPILER_ERROR_H
-#include "compiler/errors.h"
+#include "compiler/error.h"
 #endif
 
 #define INFINITE 0xFF
 
-// Fetch succeeding token not skipping any characters.
-void fetch_only(TOKEN *t) { *t = parse_token(); }
+void putt(TAG tag) {
+    switch (tag) {
+        default:
+            puts("UNKNOWN");
+            break;
+        case T_ENDPOINT:
+            puts(".");
+            break;
+        case T_NOTOKEN:
+            puts("INVALID");
+            break;
+        case T_NEWLINE:
+            puts("\n");
+            break;
+        case T_MONADIC:
+            puts("monadic");
+            break;
+        case T_DIADIC:
+            puts("diadic");
+            break;
+        case T_MULTIDIC:
+            puts("multidic");
+            break;
+        case T_QUATERNARY:
+            puts("?");
+            break;
+        case T_OUTCOME:
+            puts("outcome");
+            break;
+        case T_LOGICAL:
+            puts("logical");
+            break;
+        case T_LABEL:
+            puts("label");
+            break;
+        case T_INTB3:
+            puts("intb3");
+            break;
+        case T_INT3:
+            puts("int3");
+            break;
+        case T_INT10:
+            puts("int");
+            break;
+        case T_INT27:
+            puts("int27");
+            break;
+        case T_VARSIZE:
+            puts("size");
+            break;
+        case T_NAME:
+            puts("var");
+            break;
+        case T_REGISTER:
+            puts("reg");
+            break;
+        case T_ASSERTION:
+            puts("=");
+            break;
+        case T_COMMAND:
+            puts("comm");
+            break;
+    }
+    // puts("(");
+    // puts(itoa(tag));
+    // puts(")");
+}
 
 // Skip whitespaces and fetch succeeding token.
 void fetch(TOKEN *t) {
     while (is_empty()) next();
-    fetch_only(t);
+    *t = parse_token();
 }
 
 // Skip the rest of the line (instruction). Used to skip unexpected
@@ -63,11 +128,12 @@ void forward(TOKEN *t, uint8_t offset) {
     push(*t);
 }
 
+// Equation type enum
 typedef enum {
-    EC_STATIC = 0,        // Equation supports static values (always true)
-    EC_DYNAMIC = 1 << 0,  // Equation supports dynamic values
-    EC_LABEL = 1 << 1,    // Equation supports labels
-} EQUATION_COMPONENT;
+    EQ_NONE = 0,
+    EQ_VALUE,
+    EQ_LABEL,
+} EQUATION;
 
 // This function was isolated from the main parsing switch because many
 // structures accept equations and too many switch cases being executed
@@ -80,106 +146,290 @@ typedef enum {
 // case C:
 //  if(C) foo();
 // break;
-bool parse_equation(TOKEN *t, uint8_t mode) {
-    // Dummy variable used for error correction
-    TOKEN tName;
-    // If the last equation was logical and it can handle a
-    // quaternary operator
-    bool afterLogicalOperation = false;
-    // If the equation didn't find strange tokens until the end
-    bool succeeded = true;
-    // If error was already threw in previous cases
-    bool threwError = false;
+EQUATION parse_equation(TOKEN *t) {
+    // ----------------------------------------------------
+    // 'Global' variables (variables that really should be
+    // outside the switch statement so they can be preserved
+    // to the next iterations
 
-    // Parse equation
+    // Current type of equation
+    EQUATION type = EQ_NONE;
+    // If the last diadic operator (or multidic used as diadic)
+    // was logical
+    bool afterLogicalOperation = false;
+
+    // ----------------------------------------------------
+    // Auxiliary variables (due to C not letting us declare
+    // variables inside switch statements)
+
+    // Dummy variable used for error correction
+    TOKEN tDummy;
+    // Quaternary operator equations return type
+    EQUATION eq1;
+    EQUATION eq2;
+    EQUATION eq3;
+    // Quaternary operator final return type
+    EQUATION ret;
+    // If quaternary operator will use a third equation
+    bool has3rdEquation;
+    // Quaternary operator outcomes
+    OUTCOME o1;
+    OUTCOME o2;
+
+    // ----------------------------------------------------
+    // Equation parsing
+
     while (1) {
         // Parse monadic and multidic
         while (t->tag == T_MONADIC || t->tag == T_MULTIDIC) {
-            // Disallow quaternary operator (must be immediately
-            // after a logical operation)
-            afterLogicalOperation = false;
-            // Push operator
-            push(*t);
+            // Set equation type if still not defined (or throw error
+            // if it dissonates from current type)
+            if (!type) type = EQ_VALUE;
+            if (type != EQ_VALUE)
+                report_error(E_READ_OPERATOR);
+            else
+                // Push operator
+                push(*t);
+            // Fetch successor
             fetch(t);
         }
 
-        // Parse number or variable (or other)
+        // Parse number, variable, quaternary operator (or other)
         switch (t->tag) {
-            case T_QUATERNARY:
-                if (!afterLogicalOperation)
-                    report_error(E_UNEXPECTED_QUATERNARY_OPERATOR);
             case T_INT10:
             case T_INT27:
             case T_INT3:
             case T_INTB3:
             case T_NAME:
-                // Disallow quaternary operator (must be immediately
-                // after a logical operation)
-                afterLogicalOperation = false;
-                // Push value
-                push(*t);
+            case T_REGISTER:
+                // Set equation type if still not defined (or throw
+                // error if it dissonates from current type)
+                if (!type) type = EQ_VALUE;
+                if (type != EQ_VALUE) {
+                    // Try to fix it by pushing a dummy token
+                    tDummy = NEW_TOKEN;
+                    switch (type) {
+                        case EQ_LABEL:
+                            tDummy.tag = T_LABEL;
+                            break;
+                    }
+                    push(tDummy);
+                    report_error(E_READ_NUMBER);
+                } else
+                    // Push number
+                    push(*t);
                 // Fetch successor
                 fetch(t);
                 break;
-            case T_REGISTER:
-                // Accept or reject token based on mode
-                if (mode & EC_DYNAMIC) {
-                    // Push register
-                    push(*t);
-                    // Fetch successor
-                    fetch(t);
-                    break;
-                }
-                report_error(E_READ_REGISTER);
-                threwError = true;
             case T_LABEL:
-                // Accept or reject token based on mode
-                if (mode & EC_LABEL) {
-                    // Push register
+                // Set equation type if still not defined (or throw error
+                // if it dissonates from current type)
+                if (!type) type = EQ_LABEL;
+                if (type != EQ_LABEL) {
+                    // Try to fix it by pushing a dummy token
+                    tDummy = NEW_TOKEN;
+                    switch (type) {
+                        case EQ_VALUE:
+                            tDummy.tag = T_NAME;
+                            break;
+                    }
+                    push(tDummy);
+                    report_error(E_READ_LABEL);
+                } else
+                    // Push label
+                    push(*t);
+                // Fetch successor
+                fetch(t);
+                break;
+            // If it's something else, don't push it
+            default:
+                // If it's finished, break
+                if (t->tag == T_ENDPOINT || t->tag == T_NEWLINE)
+                    report_error(E_EXPECTED_VALUE);
+                else {
+                    // Try to fix it by pushing a dummy token
+                    tDummy = NEW_TOKEN;
+                    switch (type) {
+                        case EQ_VALUE:
+                            tDummy.tag = T_NAME;
+                            break;
+                        case EQ_LABEL:
+                            tDummy.tag = T_LABEL;
+                            break;
+                    }
+                    if (type != EQ_NONE) {
+                        push(tDummy);
+                        report_error(E_EXPECTED_OPERAND);
+                    } else if (t->tag != T_ENDPOINT && t->tag != T_NEWLINE)
+                        report_error(E_UNKNOWN_TOKEN);
+                }
+        }
+
+        // Check if it begins a quaternary operation
+        if (t->tag == T_QUATERNARY) {
+            // If quaternary operator doesn't come right after a
+            // logical equation, throw error
+            if (!afterLogicalOperation)
+                report_error(E_UNEXPECTED_QUATERNARY_OPERATOR);
+
+            // Connector operator is not logical (it is a quaternary
+            // operator)
+            afterLogicalOperation = false;
+            // Reset equation return types
+            eq1 = EQ_NONE;
+            eq2 = EQ_NONE;
+            eq3 = EQ_NONE;
+            // Reset third equation checking
+            has3rdEquation = false;
+
+            // Push quaternary operator
+            push(*t);
+            // Fetch successor
+            fetch(t);
+
+            // Ignore new lines
+            while (t->tag == T_NEWLINE) fetch(t);
+
+            // Check the FIRST outcome
+            if (t->tag != T_OUTCOME) {
+                // Try to fix it by pushing a dummy outcome
+                tDummy = NEW_TOKEN;
+                tDummy.tag = T_OUTCOME;
+                *((uint8_t *)tDummy.content) = o1 = O_IGNORE;
+                push(tDummy);
+                report_error(E_EXPECTED_OUTCOME);
+            } else {
+                // Fix outcome type if needed
+                if (*((uint8_t *)t->content) == O_ELSE) {
+                    report_error(E_UNEXPECTED_ELSE_OUTCOME);
+                    *((uint8_t *)t->content) = O_IGNORE;
+                }
+
+                // Record outcome for error purposes
+                o1 = *((uint8_t *)t->content);
+                // Push outcome
+                push(*t);
+                // Fetch successor
+                fetch(t);
+            }
+
+            // Parse FIRST equation
+            eq1 = parse_equation(t);
+
+            // Ignore new lines
+            while (t->tag == T_NEWLINE) fetch(t);
+
+            // Check the SECOND outcome
+            if (t->tag != T_OUTCOME) {
+                // Try to fix it by pushing a dummy outcome
+                tDummy = NEW_TOKEN;
+                tDummy.tag = T_OUTCOME;
+                *((uint8_t *)tDummy.content) = o2 = O_IGNORE;
+                push(tDummy);
+                report_error(E_EXPECTED_OUTCOME);
+            } else {
+                // Check for repeated outcomes
+                if (*((uint8_t *)t->content) & o1 && o1 != O_IGNORE) {
+                    report_error(E_MULTIPLE_OUTCOME);
+                    *((uint8_t *)t->content) = O_IGNORE;
+                }
+
+                // Record outcome for error purposes
+                o2 = *((uint8_t *)t->content);
+                // Push outcome
+                push(*t);
+                // Fetch successor
+                fetch(t);
+            }
+
+            // Parse SECOND equation
+            eq2 = parse_equation(t);
+
+            // If there is still a route missing, parse third outcome
+            if (o1 != O_IGNORE && o2 != O_IGNORE && o2 != O_ELSE &&
+                (o1 | o2) != 7) {  // 7 = 0b111
+
+                // Record use of a third equation
+                has3rdEquation = true;
+
+                // Ignore new lines
+                while (t->tag == T_NEWLINE) fetch(t);
+
+                // Check the THIRD outcome
+                if (t->tag != T_OUTCOME) {
+                    // Try to fix it by pushing a dummy outcome
+                    tDummy = NEW_TOKEN;
+                    tDummy.tag = T_OUTCOME;
+                    *((uint8_t *)tDummy.content) = O_IGNORE;
+                    push(tDummy);
+                    report_error(E_EXPECTED_OUTCOME);
+                } else {
+                    // Check for repeated outcomes and finished quaternary
+                    // operation
+                    if (o2 == O_ELSE ||
+                        (*((uint8_t *)t->content) & o1 && o1 != O_IGNORE) ||
+                        (*((uint8_t *)t->content) & o2 && o2 != O_IGNORE)) {
+                        report_error(E_MULTIPLE_OUTCOME);
+                        *((uint8_t *)t->content) = O_IGNORE;
+                    }
+
+                    // Push outcome
                     push(*t);
                     // Fetch successor
                     fetch(t);
-                    break;
                 }
-                report_error(E_READ_LABEL);
-                threwError = true;
-            // If it's something else, skip
-            default:
-                // Try to fix it by pushing a dummy variable
-                tName = NEW_TOKEN;
-                tName.tag = T_NAME;
-                push(tName);
-                // Exception if token is unknown and not just rejected
-                if (!threwError) {
-                    // The parsing did find strange tokens
-                    succeeded = false;
-                    report_error(E_EXPECTED_OPERAND);
-                }
-                // If it's a connector operator, it's probably a missing
-                // operand, so don't ignore it. If it's an ending token, it's
-                // probably a bad ending equation, so don't ignore it. If it's
-                // anything else, it's probably a bad operand, so ignore it.
-                if (t->tag != T_DIADIC && t->tag != T_MULTIDIC &&
-                    t->tag != T_ENDPOINT && t->tag != T_NEWLINE)
-                    fetch(t);
+
+                // Parse THIRD equation
+                eq3 = parse_equation(t);
+            }
+
+            // Check if quaternary operator has multiple returns
+            if (eq1 != eq2 || eq2 != eq3 && has3rdEquation) {
+                ret = EQ_NONE;
+                report_error(E_MULTIPLE_QUATERNARY_RETURN_TYPES);
+            } else
+                ret = eq1;
+
+            // Set equation type if still not defined (or throw error
+            // if it dissonates from current type)
+            if (!type) type = ret;
+            if (type != ret) report_error(E_INVALID_QUATERNARY_RETURN_TYPES);
         }
 
         // Check if there's a diadic, multidic or logical operator
         // to connect expressions
         if (t->tag == T_DIADIC || t->tag == T_MULTIDIC || t->tag == T_LOGICAL) {
-            // Record logical operation
+            // Record if connector operator is logical
             afterLogicalOperation = t->tag == T_LOGICAL;
-            // Push operator
-            push(*t);
+            // Set equation type if still not defined (or throw error
+            // if it dissonates from current type)
+            if (!type) type = EQ_VALUE;
+            if (type != EQ_VALUE)
+                report_error(E_READ_OPERATOR);
+            else
+                // Push operator
+                push(*t);
             // Fetch successor
             fetch(t);
             continue;
-        } else
-            return succeeded;
+        }
+        return type;
     }
 }
 
 int main(int argc, const char *argv[]) {
+    bool noCompile = false;
+    // Iterate through arguments
+    for (uint8_t i = 2; i < argc; i++)
+        if (strcmp(argv[i], "-nocompile"))
+            noCompile = true;
+        else {
+            report_warning("unknown flag", false);
+            puts(" \"");
+            puts(argv[i]);
+            puts("\".\n");
+        }
+
     // Open file
     file = open(argv[1]);
     if (file <= 0) return 1;
@@ -239,17 +489,17 @@ int main(int argc, const char *argv[]) {
                 if (!isInsideLabel) report_error(E_ASSERTION_OUTSIDE_LABEL);
                 // And try to fix it by pushing a dummy variable name
                 // e.g.: $ foo =
-                TOKEN tName = NEW_TOKEN;
-                tName.tag = T_NAME;
+                TOKEN tDummy = NEW_TOKEN;
+                tDummy.tag = T_NAME;
                 // Push variable name
-                push(tName);
+                push(tDummy);
                 // Push assertion
                 push(t);
                 // Fetch successor
                 fetch(&t);
                 // Parse equation
                 // e.g.: $ foo = 2 + 5
-                succeeded = parse_equation(&t, EC_STATIC | EC_DYNAMIC);
+                succeeded = parse_equation(&t);
                 // Skip every token after this one
                 forward(&t, (uint8_t)!succeeded);
                 continue;
@@ -267,10 +517,9 @@ int main(int argc, const char *argv[]) {
                     case C_CALL:
                         // Fetch successor
                         fetch(&t);
-                        // Parse argument (value) and count legitimate parameter
-                        // e.g.: $ call 1
-                        if (parse_equation(&t, EC_STATIC | EC_DYNAMIC))
-                            paramCount++;
+                        // Parse argument (value) and count legitimate
+                        // parameter e.g.: $ call 1
+                        if (parse_equation(&t)) paramCount++;
                         // Skip every token after this one
                         forward(&t, 1 - paramCount);
                         break;
@@ -280,21 +529,7 @@ int main(int argc, const char *argv[]) {
                         fetch(&t);
                         // Parse argument (label)
                         // e.g.: $ goto 3b
-                        if (t.tag == T_LABEL) {
-                            // Push label
-                            push(t);
-                            // Fetch successor
-                            fetch(&t);
-                            // Count legitimate parameter
-                            paramCount++;
-                        } else {
-                            // Throw error
-                            report_error(E_EXPECTED_LABEL);
-                            // Try to fix it by pushing an assertion
-                            TOKEN tLabel = NEW_TOKEN;
-                            tLabel.tag = T_LABEL;
-                            push(tLabel);
-                        }
+                        if (parse_equation(&t)) paramCount++;
                         // Skip every token after this one
                         forward(&t, 1 - paramCount);
                         break;
@@ -320,9 +555,9 @@ int main(int argc, const char *argv[]) {
                     // Throw error
                     report_error(E_EXPECTED_NAME_VARDEC);
                     // Try to fix it by pushing a dummy variable name
-                    TOKEN tName = NEW_TOKEN;
-                    tName.tag = T_NAME;
-                    push(tName);
+                    TOKEN tDummy = NEW_TOKEN;
+                    tDummy.tag = T_NAME;
+                    push(tDummy);
                 }
 
                 // Check if it has an assertion
@@ -342,7 +577,7 @@ int main(int argc, const char *argv[]) {
                 }
 
                 // Parse equation
-                succeeded = parse_equation(&t, EC_STATIC);
+                succeeded = parse_equation(&t);
                 // Skip every token after this one
                 forward(&t, (uint8_t)!succeeded);
                 continue;
@@ -377,7 +612,7 @@ int main(int argc, const char *argv[]) {
                 }
 
                 // Parse equation
-                succeeded = parse_equation(&t, EC_STATIC | EC_DYNAMIC);
+                succeeded = parse_equation(&t);
                 // Skip every token after this one
                 forward(&t, (uint8_t)!succeeded);
                 continue;
@@ -420,57 +655,10 @@ int main(int argc, const char *argv[]) {
         }
     }
 
+    if (noCompile) return 0;
+
     for (uint64_t i = 0; i < height; i++) {
-        switch (stack[i].tag) {
-            case T_NOTOKEN:
-                puts("?");
-                break;
-            case T_NEWLINE:
-                puts("\n");
-                break;
-            case T_MONADIC:
-                puts("monadic");
-                break;
-            case T_DIADIC:
-                puts("diadic");
-                break;
-            case T_MULTIDIC:
-                puts("multidic");
-                break;
-            case T_LOGICAL:
-                puts("logical");
-                break;
-            case T_LABEL:
-                puts("label");
-                break;
-            case T_INTB3:
-                puts("intb3");
-                break;
-            case T_INT3:
-                puts("int3");
-                break;
-            case T_INT10:
-                puts("int");
-                break;
-            case T_INT27:
-                puts("int27");
-                break;
-            case T_VARSIZE:
-                puts("size");
-                break;
-            case T_NAME:
-                puts("var");
-                break;
-            case T_REGISTER:
-                puts("reg");
-                break;
-            case T_ASSERTION:
-                puts("=");
-                break;
-            case T_COMMAND:
-                puts("comm");
-                break;
-        }
+        putt(stack[i].tag);
         if (stack[i].tag != T_NEWLINE) puts(" ");
     }
     puts("\n");

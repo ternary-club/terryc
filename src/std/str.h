@@ -66,3 +66,42 @@ const char *ctoa(char a) {
     charBuffer[1] = '\0';
     return charBuffer;
 }
+
+// 8 Bytes signed integer to string
+char *itoa(int64_t value) {
+    static char intBuffer[16];
+    char tmp[16];
+    char *sp = intBuffer;
+    char *tp = tmp;
+    uint32_t v;
+
+    uint8_t sign = value < 0;
+    if (sign)
+        v = -value;
+    else
+        v = value;
+
+    while (v || tp == tmp) {
+        uint8_t i = v % 10;
+        v /= 10;
+        *tp++ = i + '0';
+    }
+
+    uint8_t len = tp - tmp;
+    if (sign) {
+        *tp++ = '-';
+        len++;
+    }
+    while (tp > tmp) *sp++ = *--tp;
+
+    intBuffer[len] = '\0';
+
+    return intBuffer;
+}
+
+// String comparison
+bool strcmp(const char *a, const char *b) {
+    while (*a || *b)
+        if (*a++ != *b++) return false;
+    return true;
+}

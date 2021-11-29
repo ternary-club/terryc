@@ -3,6 +3,11 @@
 #include "../std/int.h"
 #endif
 
+#ifndef STD_tryte_H
+#define STD_tryte_H
+#include "../std/tryte.h"
+#endif
+
 #ifndef DRIVER_MEM_H
 #define DRIVER_MEM_H
 #include "../driver/mem.h"
@@ -18,8 +23,8 @@ typedef enum {
     T_MONADIC,
     T_DIADIC,
     T_MULTIDIC,
-    // Logical operators
     T_LOGICAL,
+    // Logical structures
     T_QUATERNARY,
     T_OUTCOME,
     // User
@@ -52,6 +57,15 @@ typedef enum {
     VS_WORD,
     VS_TRIPLE,
 } SIZE;
+
+// Outcome structures
+typedef enum {
+    O_ELSE = 0,
+    O_EQUAL = 1,
+    O_GREATER = 1 << 1,
+    O_LESS = 1 << 2,
+    O_IGNORE = 0xff  // For error correction purposes
+} OUTCOME;
 
 // Monadic operators enum
 typedef enum {
