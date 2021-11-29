@@ -17,4 +17,9 @@ typedef enum {
     MOD,
     CALL,
     HALT,
+} OPERATION;
+
+typedef struct {
+    OPERATION code;
+    uint8_t content;
 } INSTRUCTION;

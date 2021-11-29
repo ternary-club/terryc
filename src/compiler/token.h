@@ -3,6 +3,11 @@
 #include "../std/int.h"
 #endif
 
+#ifndef STD_STR_H
+#define STD_STR_H
+#include "../std/str.h"
+#endif
+
 #ifndef STD_tryte_H
 #define STD_tryte_H
 #include "../std/tryte.h"
@@ -114,7 +119,7 @@ typedef struct {
     TAG tag;
     COORDINATE start;
     COORDINATE end;
-    char content[TRYTE_BYTE * 3];  // 3-tryte sized buffer
+    uint8_t content[32];
 } TOKEN;
 
 // Stack
@@ -146,4 +151,72 @@ TOKEN pop() {
 TOKEN peep() {
     return height ? *(TOKEN *)((uint64_t)heap() - sizeof(TOKEN))
                   : (TOKEN){T_NOTOKEN};
+}
+
+void putt(TAG tag) {
+    switch (tag) {
+        default:
+            puts("UNKNOWN");
+            break;
+        case T_ENDPOINT:
+            puts(".");
+            break;
+        case T_NOTOKEN:
+            puts("INVALID");
+            break;
+        case T_NEWLINE:
+            puts("\n");
+            break;
+        case T_MONADIC:
+            puts("monadic");
+            break;
+        case T_DIADIC:
+            puts("diadic");
+            break;
+        case T_MULTIDIC:
+            puts("multidic");
+            break;
+        case T_QUATERNARY:
+            puts("?");
+            break;
+        case T_OUTCOME:
+            puts("outcome");
+            break;
+        case T_LOGICAL:
+            puts("logical");
+            break;
+        case T_LABEL:
+            puts("label");
+            break;
+        case T_INTB3:
+            puts("intb3");
+            break;
+        case T_INT3:
+            puts("int3");
+            break;
+        case T_INT10:
+            puts("int");
+            break;
+        case T_INT27:
+            puts("int27");
+            break;
+        case T_VARSIZE:
+            puts("size");
+            break;
+        case T_NAME:
+            puts("var");
+            break;
+        case T_REGISTER:
+            puts("reg");
+            break;
+        case T_ASSERTION:
+            puts("=");
+            break;
+        case T_COMMAND:
+            puts("comm");
+            break;
+    }
+    // puts("(");
+    // puts(itoa(tag));
+    // puts(")");
 }

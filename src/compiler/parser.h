@@ -125,6 +125,15 @@ bool strcmp_i(const char *a, uint8_t offset) {
 void strcpy_i(char *a) {
     char *b = start;
     while (b < end && b < start + TOKEN_BUFFER_SIZE) *a++ = *b++;
+    *a = '\0';
+}
+
+// Get interval string as number
+uint16_t atoi_i() {
+    uint16_t n = 0;
+    for (char *b = end - 1; b >= start; b--)
+        n += power(10, end - b - 1) * (*b - '0');
+    return n;
 }
 
 // Next char
@@ -300,6 +309,13 @@ TOKEN parse_token() {
             report_error(E_INVALID_NUMBER);
         }
         t.tag = T_INT10;
+        puts("buffer: ");
+        write(stdout, start, end - start);
+        puts(" ");
+        puts("atoi: ");
+        puts(itoa(atoi_i()));
+        puts("\n");
+        *((uint16_t *)t.content) = atoi_i();
         return t;
     }
 
@@ -510,14 +526,8 @@ TOKEN parse_token() {
             report_error(E_INVALID_LABEL);
         }
 
-        // Check if label is reserved
-        if (strcmp_i("Continue", 0))
-            *((uint8_t *)t.content) = L_CONTINUE;
-        else if (strcmp_i("End", 0))
-            *((uint8_t *)t.content) = L_END;
-        else
-            *((uint8_t *)t.content) = L_CUSTOM;
-
+        // Copy string
+        strcpy_i((char *)t.content);
         t.tag = T_LABEL;
         return t;
     }
@@ -590,6 +600,7 @@ TOKEN parse_token() {
             report_error(E_INVALID_NAME);
         }
         t.tag = T_NAME;
+        strcpy_i((char *)t.content);
         return t;
     }
 

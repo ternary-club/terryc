@@ -5,9 +5,9 @@ Label
     b += a
     b = c % d /% c ^ a | \/ - b + 2 * 5
     1a = 5
-    call 1
-    goto 3
-    
+    call 1 + 5
+    goto Label
+
 Label
     a = a =& b ? 
         > 2

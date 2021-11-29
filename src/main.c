@@ -28,80 +28,17 @@
 #include "compiler/parser.h"
 #endif
 
+#ifndef COMPILER_ASSEMBLER_H
+#define COMPILER_ASSEMBLER_H
+#include "compiler/assembler.h"
+#endif
+
 #ifndef COMPILER_ERROR_H
 #define COMPILER_ERROR_H
 #include "compiler/error.h"
 #endif
 
 #define INFINITE 0xFF
-
-void putt(TAG tag) {
-    switch (tag) {
-        default:
-            puts("UNKNOWN");
-            break;
-        case T_ENDPOINT:
-            puts(".");
-            break;
-        case T_NOTOKEN:
-            puts("INVALID");
-            break;
-        case T_NEWLINE:
-            puts("\n");
-            break;
-        case T_MONADIC:
-            puts("monadic");
-            break;
-        case T_DIADIC:
-            puts("diadic");
-            break;
-        case T_MULTIDIC:
-            puts("multidic");
-            break;
-        case T_QUATERNARY:
-            puts("?");
-            break;
-        case T_OUTCOME:
-            puts("outcome");
-            break;
-        case T_LOGICAL:
-            puts("logical");
-            break;
-        case T_LABEL:
-            puts("label");
-            break;
-        case T_INTB3:
-            puts("intb3");
-            break;
-        case T_INT3:
-            puts("int3");
-            break;
-        case T_INT10:
-            puts("int");
-            break;
-        case T_INT27:
-            puts("int27");
-            break;
-        case T_VARSIZE:
-            puts("size");
-            break;
-        case T_NAME:
-            puts("var");
-            break;
-        case T_REGISTER:
-            puts("reg");
-            break;
-        case T_ASSERTION:
-            puts("=");
-            break;
-        case T_COMMAND:
-            puts("comm");
-            break;
-    }
-    // puts("(");
-    // puts(itoa(tag));
-    // puts(")");
-}
 
 // Skip whitespaces and fetch succeeding token.
 void fetch(TOKEN *t) {
@@ -415,37 +352,13 @@ EQUATION parse_equation(TOKEN *t) {
     }
 }
 
-int main(int argc, const char *argv[]) {
-    bool noCompile = false;
-    // Iterate through arguments
-    for (uint8_t i = 2; i < argc; i++)
-        if (strcmp(argv[i], "-nocompile"))
-            noCompile = true;
-        else {
-            report_warning("unknown flag", false);
-            puts(" \"");
-            puts(argv[i]);
-            puts("\".\n");
-        }
-
-    // Open file
-    file = open(argv[1]);
-    if (file <= 0) return 1;
-
-    // Set file path for error handling
-    filename = argv[1];
-
-    // Read buffer
-    intptr a = read(file, mBuffer, MAIN_BUFFER_SIZE * 2);
-    end = mBuffer;
-
-    TOKEN t = NEW_TOKEN;
+void parse() {
     // General variables
+    TOKEN t = NEW_TOKEN;
     bool isInsideLabel = false;
     // Specific variables
     bool hasMonadic;
-    bool succeeded;
-    uint8_t paramCount;
+    EQUATION equation;
 
     // Fetch successor
     fetch(&t);
@@ -453,9 +366,6 @@ int main(int argc, const char *argv[]) {
     while (1) {
         // If it hits the end, breaks
         if (t.tag == T_ENDPOINT) break;
-
-        // Fetch successor
-        // fetch(&t);
 
         // Switch tag (always the first tag of instruction)
         switch (t.tag) {
@@ -501,15 +411,15 @@ int main(int argc, const char *argv[]) {
                 fetch(&t);
                 // Parse equation
                 // e.g.: $ foo = 2 + 5
-                succeeded = parse_equation(&t);
+                equation = parse_equation(&t);
+                if (equation != EQ_VALUE && equation != EQ_NONE)
+                    report_error(E_EXPECTED_VALUE);
                 // Skip every token after this one
-                forward(&t, (uint8_t)!succeeded);
+                forward(&t, 0);
                 continue;
             // Command
             // e.g.: $ goto
             case T_COMMAND:
-                // Parameter count for error handling
-                paramCount = 0;
                 // Push command
                 push(t);
                 // Check if it's inside a label
@@ -521,9 +431,11 @@ int main(int argc, const char *argv[]) {
                         fetch(&t);
                         // Parse argument (value) and count legitimate
                         // parameter e.g.: $ call 1
-                        if (parse_equation(&t)) paramCount++;
+                        equation = parse_equation(&t);
+                        if (equation != EQ_VALUE && equation != EQ_NONE)
+                            report_error(E_EXPECTED_VALUE);
                         // Skip every token after this one
-                        forward(&t, 1 - paramCount);
+                        forward(&t, 0);
                         break;
                         // e.g.: $ goto
                     case C_GOTO:
@@ -531,9 +443,11 @@ int main(int argc, const char *argv[]) {
                         fetch(&t);
                         // Parse argument (label)
                         // e.g.: $ goto 3b
-                        if (parse_equation(&t)) paramCount++;
+                        equation = parse_equation(&t);
+                        if (equation != EQ_LABEL && equation != EQ_NONE)
+                            report_error(E_EXPECTED_LABEL);
                         // Skip every token after this one
-                        forward(&t, 1 - paramCount);
+                        forward(&t, 0);
                         break;
                 }
                 continue;
@@ -579,9 +493,11 @@ int main(int argc, const char *argv[]) {
                 }
 
                 // Parse equation
-                succeeded = parse_equation(&t);
+                equation = parse_equation(&t);
+                if (equation != EQ_VALUE && equation != EQ_NONE)
+                    report_error(E_EXPECTED_VALUE);
                 // Skip every token after this one
-                forward(&t, (uint8_t)!succeeded);
+                forward(&t, 0);
                 continue;
             // Assignable entity
             // e.g.: $ 1a
@@ -614,15 +530,18 @@ int main(int argc, const char *argv[]) {
                 }
 
                 // Parse equation
-                succeeded = parse_equation(&t);
+                equation = parse_equation(&t);
+                if (equation != EQ_VALUE && equation != EQ_NONE)
+                    report_error(E_EXPECTED_VALUE);
                 // Skip every token after this one
-                forward(&t, (uint8_t)!succeeded);
+                forward(&t, 0);
                 continue;
             // Labels
             // e.g.: $ Foo
             case T_LABEL:
                 // Check if it's a reserved label
-                if (*((uint8_t *)t.content) != L_CUSTOM)
+                if (strcmp((char *)t.content, "Continue") ||
+                    strcmp((char *)t.content, "End"))
                     report_error(E_INVALID_RESERVED_LABEL);
                 // Mark inside of label
                 isInsideLabel = true;
@@ -652,9 +571,37 @@ int main(int argc, const char *argv[]) {
                 break;
             default:
                 report_error(E_UNKNOWN_TOKEN);
-                return 0;
+                return;
         }
     }
+}
+
+int main(int argc, const char *argv[]) {
+    bool noCompile = false;
+    // Iterate through arguments
+    for (uint8_t i = 2; i < argc; i++)
+        if (strcmp(argv[i], "-nocompile"))
+            noCompile = true;
+        else {
+            report_warning("unknown flag", false);
+            puts(" \"");
+            puts(argv[i]);
+            puts("\".\n");
+        }
+
+    // Open file
+    file = open(argv[1]);
+    if (file <= 0) return 1;
+
+    // Set file path for error handling
+    filename = argv[1];
+
+    // Read buffer
+    read(file, mBuffer, MAIN_BUFFER_SIZE * 2);
+    end = mBuffer;
+
+    // Perform tokenization
+    parse();
 
     if (noCompile) return 0;
 
@@ -663,4 +610,7 @@ int main(int argc, const char *argv[]) {
         if (stack[i].tag != T_NEWLINE) puts(" ");
     }
     puts("\n");
+
+    // Assemble
+    assemble(stack);
 }

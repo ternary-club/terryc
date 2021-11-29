@@ -13,6 +13,8 @@ typedef enum {
     E_VARDEC_INSIDE_LABEL,
     E_COMMAND_OUTSIDE_LABEL,
     E_ASSERTION_OUTSIDE_LABEL,
+    E_DUPLICATED_NAME,
+    E_UNKNOWN_NAME,
     E_INVALID_NAME,
     E_EXPECTED_NAME_VARDEC,
     E_UNKNOWN_BASE_LITERAL,
@@ -31,6 +33,7 @@ typedef enum {
     E_INVALID_OUTCOME,
     E_EXPECTED_LABEL,
     E_READ_LABEL,
+    E_DUPLICATED_LABEL,
     E_INVALID_LABEL,
     E_INVALID_RESERVED_LABEL,
     E_EXPECTED_END,
@@ -60,14 +63,14 @@ void report_warning(const char *warning, bool newLine) {
     if (newLine) puts("\n");
 }
 
-// Report an error
-void report_error(ERROR err) {
+// Report error indicating coordinates
+void report_error_coord(ERROR err, COORDINATE coord) {
     puts("\x1b[1m");
     puts(filename);
     puts(":");
-    puts(itoa(first.line + 1));
+    puts(itoa(coord.line + 1));
     puts(":");
-    puts(itoa(first.column + 1));
+    puts(itoa(coord.column + 1));
     puts(": ");
     puts("\x1b[31merror:\x1b[0m ");
     switch (err) {
@@ -79,6 +82,12 @@ void report_error(ERROR err) {
             break;
         case E_ASSERTION_OUTSIDE_LABEL:
             puts("assertion outside label");
+            break;
+        case E_DUPLICATED_NAME:
+            puts("duplicated variable declaration");
+            break;
+        case E_UNKNOWN_NAME:
+            puts("unknown variable");
             break;
         case E_INVALID_NAME:
             puts("invalid variable name");
@@ -140,6 +149,9 @@ void report_error(ERROR err) {
         case E_EXPECTED_LABEL:
             puts("expected label");
             break;
+        case E_DUPLICATED_LABEL:
+            puts("duplicated label declaration");
+            break;
         case E_INVALID_LABEL:
             puts("invalid label name");
             break;
@@ -194,3 +206,6 @@ void report_error(ERROR err) {
     }
     puts("\n");
 }
+
+// Report an error
+void report_error(ERROR err) { report_error_coord(err, first); }
