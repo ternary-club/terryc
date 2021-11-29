@@ -13,8 +13,8 @@
 #include "error.h"
 #endif
 
-#define MAIN_BUFFER_SIZE 243
-#define TOKEN_BUFFER_SIZE 27
+#define MAIN_BUFFER_SIZE 64
+#define TOKEN_BUFFER_SIZE 32
 
 // File
 intptr file;
@@ -137,10 +137,13 @@ void next() {
     // Jump to next character
     end++;
     // If it has reached the end of buffer, load next chars
-    if (end >= mBuffer + 2 * MAIN_BUFFER_SIZE) {
-        for (uint8_t i = 0; i < MAIN_BUFFER_SIZE; i++)
+    if (end >= mBuffer + 2 * MAIN_BUFFER_SIZE - 1) {
+        for (uint64_t i = 0; i < MAIN_BUFFER_SIZE; i++)
             mBuffer[i] = mBuffer[i + MAIN_BUFFER_SIZE];
-        read(file, mBuffer + 2 * MAIN_BUFFER_SIZE, MAIN_BUFFER_SIZE);
+        int bytesRead =
+            read(file, mBuffer + MAIN_BUFFER_SIZE, MAIN_BUFFER_SIZE);
+        if (bytesRead < MAIN_BUFFER_SIZE)
+            mBuffer[bytesRead + MAIN_BUFFER_SIZE] = 0;
         start -= MAIN_BUFFER_SIZE;
         end -= MAIN_BUFFER_SIZE;
     }

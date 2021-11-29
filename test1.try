@@ -1,9 +1,19 @@
+tryte a = ~ 0hEAEMENKKK + 2
+word b = 0t1021012 / \/ 2
+
+Label
+    b += a
+    b = c % d /% c ^ a | \/ - b + 2 * 5
+    1a = 5
+    call 1
+    goto 3
+    
 Label
     a = a =& b ? 
-        >   a
-        ==  c =** b ?
-            > a =/+ c ?
+        > 2
+        == c =& b ?
+            > a =& c ?
                 <= 2
-                :  0
-            : 1
-        <   b
+                    : 2
+            :  4
+        : 2

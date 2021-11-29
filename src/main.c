@@ -216,7 +216,7 @@ EQUATION parse_equation(TOKEN *t) {
                     push(tDummy);
                     report_error(E_READ_NUMBER);
                 } else
-                    // Push number
+                    // Push value
                     push(*t);
                 // Fetch successor
                 fetch(t);
@@ -384,16 +384,14 @@ EQUATION parse_equation(TOKEN *t) {
             }
 
             // Check if quaternary operator has multiple returns
-            if (eq1 != eq2 || eq2 != eq3 && has3rdEquation) {
-                ret = EQ_NONE;
+            if (eq1 != eq2 && eq1 != EQ_NONE && eq2 != EQ_NONE ||
+                eq2 != eq3 && has3rdEquation && eq2 != EQ_NONE &&
+                    eq3 != EQ_NONE)
                 report_error(E_MULTIPLE_QUATERNARY_RETURN_TYPES);
-            } else
-                ret = eq1;
-
-            // Set equation type if still not defined (or throw error
-            // if it dissonates from current type)
-            if (!type) type = ret;
-            if (type != ret) report_error(E_INVALID_QUATERNARY_RETURN_TYPES);
+            else
+                // Set equation type if still not defined (or throw error
+                // if it dissonates from current type)
+                type = eq1;
         }
 
         // Check if there's a diadic, multidic or logical operator
@@ -438,7 +436,7 @@ int main(int argc, const char *argv[]) {
     filename = argv[1];
 
     // Read buffer
-    read(file, mBuffer, MAIN_BUFFER_SIZE);
+    intptr a = read(file, mBuffer, MAIN_BUFFER_SIZE * 2);
     end = mBuffer;
 
     TOKEN t = NEW_TOKEN;
@@ -448,12 +446,16 @@ int main(int argc, const char *argv[]) {
     bool hasMonadic;
     bool succeeded;
     uint8_t paramCount;
+
+    // Fetch successor
+    fetch(&t);
+
     while (1) {
         // If it hits the end, breaks
         if (t.tag == T_ENDPOINT) break;
 
         // Fetch successor
-        fetch(&t);
+        // fetch(&t);
 
         // Switch tag (always the first tag of instruction)
         switch (t.tag) {
@@ -635,23 +637,22 @@ int main(int argc, const char *argv[]) {
             // e.g.: $ \n
             // e.g.: $ \r\n
             case T_NEWLINE:
-                // Push new line
-                push(t);
                 // Skip multiple new lines
                 do
                     // Fetch successor
                     fetch(&t);
                 while (t.tag == T_NEWLINE);
                 continue;
-                // End point
-                // e.g.: $ \0
-                // e.g.: $ \x03
+            // End point
+            // e.g.: $ \0
+            // e.g.: $ \x03
             case T_ENDPOINT:
                 // Push end point
                 push(t);
                 break;
             default:
                 report_error(E_UNKNOWN_TOKEN);
+                return 0;
         }
     }
 
